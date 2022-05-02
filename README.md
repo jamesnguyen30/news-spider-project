@@ -1,0 +1,3 @@
+### News spider project to crawl financial news daily from various news sources like CNN, Bloomberg, Yahoo, etc, ... 
+
+
