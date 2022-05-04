@@ -1,0 +1,116 @@
+INFO:WDM:
+
+INFO:WDM:====== WebDriver manager ======
+INFO:WDM:Current google-chrome version is 101.0.4951
+INFO:WDM:Get LATEST chromedriver version for 101.0.4951 google-chrome
+INFO:WDM:Driver [/home/nguyen/.wdm/drivers/chromedriver/linux64/101.0.4951.41/chromedriver] found in cache
+INFO:root:Accessing site: https://cnn.com
+ERROR:root:Message: timeout: Timed out receiving message from renderer: 9.654
+  (Session info: chrome=101.0.4951.41)
+Stacktrace:
+#0 0x55c670342533 <unknown>
+#1 0x55c6700a11e8 <unknown>
+#2 0x55c67008c118 <unknown>
+#3 0x55c67008ad1f <unknown>
+#4 0x55c67008b2ac <unknown>
+#5 0x55c67009973f <unknown>
+#6 0x55c67009a2a2 <unknown>
+#7 0x55c6700a833d <unknown>
+#8 0x55c6700ab6ba <unknown>
+#9 0x55c67008b6d6 <unknown>
+#10 0x55c6700a8044 <unknown>
+#11 0x55c670108628 <unknown>
+#12 0x55c6700f4e33 <unknown>
+#13 0x55c6700ca71a <unknown>
+#14 0x55c6700cb875 <unknown>
+#15 0x55c670386e1d <unknown>
+#16 0x55c67038a751 <unknown>
+#17 0x55c67037107e <unknown>
+#18 0x55c67038b388 <unknown>
+#19 0x55c670365fe0 <unknown>
+#20 0x55c6703a7748 <unknown>
+#21 0x55c6703a78c8 <unknown>
+#22 0x55c6703c170d <unknown>
+#23 0x7f2d29b2e609 <unknown>
+
+INFO:root:waiting on search button
+INFO:root:Killed driver
+INFO:WDM:
+
+INFO:WDM:====== WebDriver manager ======
+INFO:WDM:Current google-chrome version is 101.0.4951
+INFO:WDM:Get LATEST chromedriver version for 101.0.4951 google-chrome
+INFO:WDM:Driver [/home/nguyen/.wdm/drivers/chromedriver/linux64/101.0.4951.41/chromedriver] found in cache
+INFO:root:Accessing site: https://cnn.com
+ERROR:root:Message: timeout: Timed out receiving message from renderer: 4.350
+  (Session info: chrome=101.0.4951.41)
+Stacktrace:
+#0 0x55c21bdca533 <unknown>
+#1 0x55c21bb291e8 <unknown>
+#2 0x55c21bb14118 <unknown>
+#3 0x55c21bb12d1f <unknown>
+#4 0x55c21bb132ac <unknown>
+#5 0x55c21bb2173f <unknown>
+#6 0x55c21bb222a2 <unknown>
+#7 0x55c21bb3033d <unknown>
+#8 0x55c21bb336ba <unknown>
+#9 0x55c21bb136d6 <unknown>
+#10 0x55c21bb30044 <unknown>
+#11 0x55c21bb90628 <unknown>
+#12 0x55c21bb7ce33 <unknown>
+#13 0x55c21bb5271a <unknown>
+#14 0x55c21bb53875 <unknown>
+#15 0x55c21be0ee1d <unknown>
+#16 0x55c21be12751 <unknown>
+#17 0x55c21bdf907e <unknown>
+#18 0x55c21be13388 <unknown>
+#19 0x55c21bdedfe0 <unknown>
+#20 0x55c21be2f748 <unknown>
+#21 0x55c21be2f8c8 <unknown>
+#22 0x55c21be4970d <unknown>
+#23 0x7f393e136609 <unknown>
+
+INFO:root:waiting on search button
+INFO:root:Killed driver
+INFO:WDM:
+
+INFO:WDM:====== WebDriver manager ======
+INFO:WDM:Current google-chrome version is 101.0.4951
+INFO:WDM:Get LATEST chromedriver version for 101.0.4951 google-chrome
+INFO:WDM:Driver [/home/nguyen/.wdm/drivers/chromedriver/linux64/101.0.4951.41/chromedriver] found in cache
+INFO:WDM:
+
+INFO:WDM:====== WebDriver manager ======
+INFO:WDM:Current google-chrome version is 101.0.4951
+INFO:WDM:Get LATEST chromedriver version for 101.0.4951 google-chrome
+INFO:WDM:Driver [/home/nguyen/.wdm/drivers/chromedriver/linux64/101.0.4951.41/chromedriver] found in cache
+INFO:root:searching url: https://cnn.com/search?q=apple
+ERROR:root:Message: timeout: Timed out receiving message from renderer: 4.701
+  (Session info: chrome=101.0.4951.41)
+Stacktrace:
+#0 0x5587423bb533 <unknown>
+#1 0x55874211a1e8 <unknown>
+#2 0x558742105118 <unknown>
+#3 0x558742103d1f <unknown>
+#4 0x5587421042ac <unknown>
+#5 0x55874211273f <unknown>
+#6 0x5587421132a2 <unknown>
+#7 0x55874212133d <unknown>
+#8 0x5587421246ba <unknown>
+#9 0x5587421046d6 <unknown>
+#10 0x558742121044 <unknown>
+#11 0x558742181628 <unknown>
+#12 0x55874216de33 <unknown>
+#13 0x55874214371a <unknown>
+#14 0x558742144875 <unknown>
+#15 0x5587423ffe1d <unknown>
+#16 0x558742403751 <unknown>
+#17 0x5587423ea07e <unknown>
+#18 0x558742404388 <unknown>
+#19 0x5587423defe0 <unknown>
+#20 0x558742420748 <unknown>
+#21 0x5587424208c8 <unknown>
+#22 0x55874243a70d <unknown>
+#23 0x7f66777b5609 <unknown>
+
+INFO:root:Killed driver

@@ -20,6 +20,7 @@ class G2G_Scraper():
         self.chrome_options.add_argument('--ignore-ssl-errors')
         self.driver = webdriver.Chrome(service = Service(ChromeDriverManager().install()),\
             chrome_options=self.chrome_options)
+        self.driver.set_page_load_timeout(5)
         
     def get_server_links(self):
         url = 'https://www.g2g.com/categories/lost-ark-gold'
