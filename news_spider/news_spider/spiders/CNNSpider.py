@@ -25,6 +25,7 @@ LOG_FILE = os.path.join(LOG_DIR, f'{str(current_datetime.date())}_{str(current_d
 HTML_LOG_DIR = os.path.join(LOG_DIR, 'html')
 OUTPUT_DIR = os.path.join(CWD, 'dataset')
 META_DIR = os.path.join(OUTPUT_DIR, 'metadata')
+ERROR_LINKS_FILE = os.path.join(LOG_DIR, 'link_errors.log')
 
 if os.path.exists(OUTPUT_DIR) == False:
     os.makedirs(OUTPUT_DIR)
@@ -58,12 +59,19 @@ class CNNSearchSpider(scrapy.Spider):
         configure_logging(install_root_handler=False)
 
     def start_requests(self):
+        if self.retry == str(True):
+            self._retry_error_links()
+            return
+
         assert self.search_term != None, 'Search term is None'
+
+        if self.sections == None:
+            self.sections = 'business'
 
         for page in range(1,3):
             size = 50
             from_page = 50 * (page - 1)
-            search_url = f'https://www.cnn.com/search?q={self.search_term}&size={size}&from={from_page}&page={page}'
+            search_url = f'https://www.cnn.com/search?q={self.search_term}&size={size}&from={from_page}&page={page}&sections={self.sections}'
             print(search_url)
             yield SplashRequest(search_url, callback = self.parse, args = {'wait': 5})
     
@@ -77,25 +85,18 @@ class CNNSearchSpider(scrapy.Spider):
             file.write(response.body)
     
         self._process_html_from_path(html_saved_path)
+    
+    def _fetch_article(self, link):
+        '''
+            Fetch article from link
+            @params
+                string link
+            @return
+                list of error links
+        '''
+        link_errors = list()
 
-    def _process_html_from_path(self, path):
-
-        with open(path, 'r') as file:
-            html = file.read()
-        
-        soup = bs(html)
-
-        h3_headlines = soup.find_all('h3', {'class': 'cnn-search__result-headline'})
-
-        links = list()
-
-        for h3 in h3_headlines:
-            href = h3.find("a").attrs['href']
-            links.append("https:" + href)
-
-        logging.info(f'found {len(links)} links')
-
-        for link in links:
+        try:
             logging.info(f"Extracting news at {link}")
             article = Article(link)
             article.download()
@@ -127,3 +128,50 @@ class CNNSearchSpider(scrapy.Spider):
                 file.write('\n'.join(meta_content))
             
             logging.info(f"Saved to {OUTPUT_DIR} and metadata to {META_DIR}")
+        except Exception as e:
+            logging.error(f'An error happend at link: {link}. Saving to error-links.log')
+            link_errors.append(link)
+            logging.error(e)
+        finally:
+            return link_errors
+
+    def _process_html_from_path(self, path):
+
+        with open(path, 'r') as file:
+            html = file.read()
+        
+        soup = bs(html)
+
+        h3_headlines = soup.find_all('h3', {'class': 'cnn-search__result-headline'})
+
+        links = list()
+
+        for h3 in h3_headlines:
+            href = h3.find("a").attrs['href']
+            links.append("https:" + href)
+
+        logging.info(f'found {len(links)} links')
+
+        link_errors = list()
+        for link in links:
+            link_errors.append(self._fetch_article(link))
+
+        with open(ERROR_LINKS_FILE, 'w') as file:
+            logging.info(f"Saving {len(link_errors)} link errors to file: {ERROR_LINKS_FILE}")
+            file.write('\n'.join(link_errors))
+    
+    def _retry_error_links(self):
+        assert os.path.exists(ERROR_LINKS_FILE) == True, f"Attempting to retry error links but {ERROR_LINKS_FILE} is not found"
+
+        logging.info(f'Loading error link file: {ERROR_LINKS_FILE}')
+
+        with open(ERROR_LINKS_FILE, 'r') as file:
+            links = file.readlines()
+        error_links = list() 
+        for link in links:
+            error_links.append(self._fetch_article(link))
+        
+        with open(ERROR_LINKS_FILE, 'w') as file:
+            logging.error(f'Found {len(error_links)}. Rewriting to {ERROR_LINKS_FILE}')
+            file.write('\n'.join(error_links))
+        
