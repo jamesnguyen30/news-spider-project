@@ -1,0 +1,11 @@
+url:https://www.cnn.com/2022/05/04/economy/abortion-roe-wade-companies-disney/index.html
+summary:Yet the Supreme Court's potential action against Roe v. Wade could create a situation in which as many as 26 states could ban abortion.
+"Big corporations have spent decades advocating for women's equality in the workplace and abortion ban laws are a direct threat to that," he said.
+Texas passed a near-total abortion ban in September but very few companies took a clear stance on the bill.
+A second letter " Don't Ban Equality in Texas " was signed by about 80 companies, including Netflix and Yelp, last year.
+There's a chorus of "Don't Ban Equality" signers who are ready to speak out, said Jen Stark, senior director at Tara Health Foundation, the organization behind the letter.
+keywords:['stay', 'avoid', 'ban', 'employees', 'texas', 'abortion', 'politicians', 'gop', 'companies', 'rights', 'issues', 'support', 'retaliation', 'equality', 'silent']
+top image:https://cdn.cnn.com/cnnnext/dam/assets/220503142934-roe-wade-protest-050222-super-tease.jpg
+authors:['Analysis Nicole Goodkind', 'Cnn Business']
+date:2022-05-04 00:00:00
+title:Will companies stay silent on abortion to avoid GOP retaliation?

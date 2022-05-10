@@ -4,6 +4,8 @@ import pathlib
 import os
 import nltk
 import uuid
+import sys
+from datetime import datetime, timedelta
 
 nltk.download('punkt')
 
@@ -18,22 +20,33 @@ if os.path.exists(OUTPUT_DIR) == False:
 
 print(f"Saving to {OUTPUT_DIR}")
 
-
 if __name__ == '__main__':
-    with open('cnn_search_results.html', 'r') as file:
+    start_date = datetime.now()
+    length = 1
+    end_date = start_date - timedelta(days = length + 1)
+    end_date = end_date.replace(hour = 23, minute = 59, second = 59)
+    print('end date = ', end_date)
+
+    sample_file = os.path.join(CWD,'sample_cnn_search_page.html' )
+    with open(sample_file, 'r') as file:
         html = file.read()
     
     soup = bs(html)
 
-    h3_headlines = soup.find_all('h3', {'class': 'cnn-search__result-headline'})
+    result_contents = soup.find_all('div', {'class':'cnn-search__result-contents'})
 
     links = list()
 
-    for h3 in h3_headlines:
-        href = h3.find("a").attrs['href']
+    for div in result_contents:
+        href = div.find("h3", {'class': 'cnn-search__result-headline'}).find('a').attrs['href']
+        date = div.find('div', {'class': 'cnn-search__result-publish-date'}).find_all('span')[1].text
+        date_obj = datetime.strptime(date, "%b %d, %Y")
+        print(date_obj, f"if {date_obj} > {end_date}: {date_obj > end_date}")
         links.append("https:" + href)
 
     print(links[0])
+
+    sys.exit(0)
 
     for link in links:
         article = Article(link)

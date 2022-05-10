@@ -1,0 +1,11 @@
+url:https://www.cnn.com/2022/05/05/tech/meta-slowing-hiring/index.html
+summary:New York (CNN Business) Meta said Thursday it is cutting back on hiring.
+The move is one of several shifts the Facebook parent company is making following a period of slower-than-usual growth.
+The company still plans to "grow our workforce to ensure we focus on long term impact," the statement said.
+The company does not currently have plans for layoffs, but the hiring slowdown marks a reversal from aggressive workforce growth during the first three months of 2022.
+Meta plans to slow or halt hiring for most mid- to senior-level positions, and recently also paused hiring early-career engineers.
+keywords:['period', 'statement', 'billion', 'following', 'slow', 'quarter', 'growth', 'business', 'hiring', 'announces', 'plans', 'company', 'workforce', 'meta', 'challenging']
+top image:https://cdn.cnn.com/cnnnext/dam/assets/220505160808-meta-headquarters-file-2021-restricted-super-tease.jpg
+authors:['Clare Duffy', 'Cnn Business']
+date:2022-05-05 00:00:00
+title:Meta announces plans to slow hiring following challenging quarter

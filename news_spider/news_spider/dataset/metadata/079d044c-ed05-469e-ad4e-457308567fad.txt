@@ -1,0 +1,11 @@
+url:https://www.cnn.com/2022/05/10/business/china-covid-lockdowns-impact-global-business-intl-hnk/index.html
+summary:The crisis is a stark reminder of China's outsized importance to global companies.
+Much of the PC maker's production is in China, according to its most recent list of top suppliers.
+Demand for electric vehicles has stayed strong though: Both Volkswagen and Chinese manufacturer BYD reported a recent surge in Chinese sales.
+As other nations continue to reopen, some foreign companies may consider moving their regional headquarters out of China, according to Jörg Wuttke, president of the European Union Chamber of Commerce in China.
+Pedestrians along the near-empty Nanjing Road shopping street outside of the impacted areas during a lockdown in Shanghai, China in March.
+keywords:['toll', 'month', 'lockdowns', 'china', 'supply', 'recent', 'hit', 'companies', 'chinese', 'according', 'shanghai', 'taking', 'production', 'sales', 'chinas', 'global']
+top image:https://cdn.cnn.com/cnnnext/dam/assets/220509015238-shanghai-empty-nanjing-0331-restricted-super-tease.jpg
+authors:['Analysis Michelle Toh', 'Cnn Business', 'Starbucks Ceo Howard Schultz']
+date:2022-05-10 00:00:00
+title:How China's lockdowns are taking a toll on global companies

@@ -1,4 +1,6 @@
+from dataclasses import dataclass
 from gettext import install
+from selectors import EpollSelector
 import scrapy
 from scrapy_splash import SplashRequest
 from scrapy import cmdline
@@ -8,10 +10,13 @@ import os
 import nltk
 import uuid
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from newspaper import Article
 import re
 from imp import reload
+import os
+import requests
+from bs4 import BeautifulSoup
 
 nltk.download('punkt')
 
@@ -22,7 +27,9 @@ def check_and_create_dir(dir):
     if os.path.exists(dir) == False:
         os.makedirs(dir)
 
-def get_date_format(date):
+def get_date_format(date, date_only=False):
+    if date_only:
+        return f'{date.month}_{date.day}_{date.year}'
     return f'{date.month}_{date.day}_{date.year}_{date.hour}H_{date.minute}M'
 
 class CNNSearchSpider(scrapy.Spider):
@@ -31,24 +38,47 @@ class CNNSearchSpider(scrapy.Spider):
         specifically search for keyword
         @params:
             string search_term
+            string sections 
+            boolean retry = False (default)
+            datetime start_date = datetime.now() (default), accept date format: 'm-d-yyyy' or quickly set 'today'
+            int days_from_start_date = 1 (default)
+
         @returns
             list results
     '''
     name = 'cnn_search_spider'
 
-    def __init__(self, search_term =None, sections = None, retry = False, *args, **kwargs, ):
+    def __init__(self, search_term =None, sections = None, retry = False, start_date = None, days_from_start_date = None, *args, **kwargs, ):
         super(CNNSearchSpider, self).__init__(*args, **kwargs)
+
+        # Configure search params
         self.search_term = search_term
         self.sections = sections
+        self.retry = retry
+        self.start_date = start_date
+        self.days_from_start_date = int(days_from_start_date)
+
+        # Configure default date to scrape
+
+        if self.start_date == None or self.start_date.lower() == 'today':
+            self.start_date = datetime.now()
+        else:
+            self.start_date = datetime.strptime(self.start_date, '%m-%d-%Y')
+        
+        if self.days_from_start_date == None:
+            self.days_from_start_date = 1
+        
+        self.end_date = self.start_date - timedelta(days = self.days_from_start_date)
+        self.end_date = self.end_date.replace(hour = 0, minute = 0, second = 0)
         
         assert self.search_term != None, 'Search term is None'
         assert self.sections != None, 'Sections is  is None'
 
         #Initiate directories
 
-        self.OUTPUT_DIR = os.path.join(CWD, 'dataset', f'{self.search_term}_{self.sections}_{get_date_format(datetime.now())}')
+        self.OUTPUT_DIR = os.path.join(CWD, 'dataset', f'{self.search_term}_{self.sections}_{get_date_format(self.start_date)}')
         self.LOG_DIR = os.path.join(self.OUTPUT_DIR, 'log')
-        self.LOG_FILE = os.path.join(self.LOG_DIR, f'_{self.search_term}_{self.sections}_{get_date_format(datetime.now())}_log.txt')
+        self.LOG_FILE = os.path.join(self.LOG_DIR, f'_{self.search_term}_{self.sections}_{get_date_format(self.start_date)}_log.txt')
         self.HTML_LOG_DIR = os.path.join(self.LOG_DIR, 'html')
         self.META_DIR = os.path.join(self.OUTPUT_DIR, 'metadata')
         self.ERROR_LINKS_FILE = os.path.join(self.LOG_DIR, 'link_errors.log')
@@ -58,10 +88,10 @@ class CNNSearchSpider(scrapy.Spider):
         check_and_create_dir(self.LOG_DIR)
         check_and_create_dir(self.HTML_LOG_DIR)
 
-        print(f"save data to {self.OUTPUT_DIR} and meta data to {self.META_DIR} and log to {self.LOG_FILE}")
         reload(logging)
-        logging.basicConfig(filename = self.LOG_FILE, level = logging.INFO)
-        print("Saving log to ", self.LOG_FILE)
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.WARNING)
+        logging.basicConfig(level = logging.INFO, handlers = [logging.FileHandler(self.LOG_FILE, mode= 'w'), stream_handler])
 
     def start_requests(self):
         if hasattr(self, 'retry'): 
@@ -73,7 +103,6 @@ class CNNSearchSpider(scrapy.Spider):
             size = 50
             from_page = 50 * (page - 1)
             search_url = f'https://www.cnn.com/search?q={self.search_term}&size={size}&from={from_page}&page={page}&sections={self.sections}'
-            print(search_url)
             yield SplashRequest(search_url, callback = self.parse, args = {'wait': 5})
     
     def parse(self, response):
@@ -105,12 +134,21 @@ class CNNSearchSpider(scrapy.Spider):
             id = str(uuid.uuid4())
             extension = 'txt'
 
+            # newspaper3k often parse with not all the article content. 
+            # If there's a Read More text at the last line, trigger manual text parsing
+            # This is an unknown error in newspaper3k
+            
+            last_line = article.text.split('\n')[-1]
+            
+            if last_line == 'Read More':
+                text = self._manually_get_text(link)
+                article.text = text
+
             #Filter out non-alphabet and non-digits character
             article.title = re.sub(r'[^a-zA-Z\s0-9]+', '', article.title)
             filename = f'{id}_{article.title}.{extension}'
             with open(os.path.join(self.OUTPUT_DIR, filename), 'w') as file:
                 file.write(article.text)
-            print(f'body: {article.text}')
 
             meta_content = list() 
             article.nlp()
@@ -122,8 +160,6 @@ class CNNSearchSpider(scrapy.Spider):
             meta_content.append(f'date:{article.publish_date}')
             meta_content.append(f'title:{article.title}')
 
-            print('\n'.join(meta_content))
-
             meta_filename = f'{id}.{extension}'
             with open(os.path.join(self.META_DIR, meta_filename), 'w') as file:
                 file.write('\n'.join(meta_content))
@@ -132,9 +168,32 @@ class CNNSearchSpider(scrapy.Spider):
         except Exception as e:
             logging.error(f'An error happend at link: {link}. Saving to error-links.log')
             link_errors.append(link)
-            logging.error(e)
         finally:
             return link_errors
+        
+    def _manually_get_text(self, link):
+
+        html = requests.get(link)
+
+        soup = BeautifulSoup(html.text)
+
+        elements = soup.find_all(recursive=True, )
+
+        text_element = list()
+        for e in elements:
+            try:
+                for element_class in e.attrs['class']:
+                    if element_class.startswith('zn-body__paragraph'):
+                        text_element.append(e)
+            except KeyError as error:
+                continue
+                    
+        text = list()
+        for e in text_element:
+            text.append(e.text)
+
+        print("Start from here:")
+        return '\n'.join(text)
 
     def _process_html_from_path(self, path):
 
@@ -142,28 +201,38 @@ class CNNSearchSpider(scrapy.Spider):
             html = file.read()
         
         soup = bs(html)
-
-        h3_headlines = soup.find_all('h3', {'class': 'cnn-search__result-headline'})
+        # h3_headlines = soup.find_all('h3', {'class': 'cnn-search__result-headline'})
+        result_contents = soup.find_all('div', {'class':'cnn-search__result-contents'})
 
         links = list()
+        for div in result_contents:
 
-        for h3 in h3_headlines:
-            href = h3.find("a").attrs['href']
-            links.append("https:" + href)
+            href = div.find("h3", {'class': 'cnn-search__result-headline'}).find('a').attrs['href']
+            date = div.find('div', {'class': 'cnn-search__result-publish-date'}).find_all('span')[1].text
+            date_obj = datetime.strptime(date, "%b %d, %Y")
+            if date_obj < self.end_date:
+                break
+            links.append('https:' + href)
+        # for h3 in h3_headlines:
+        #     href = h3.find("a").attrs['href']
+        #     links.append("https:" + href)
 
-        logging.info(f'found {len(links)} links')
+        logging.info(f'found {len(links)} links before date: {self.end_date}')
 
         link_errors = list()
         for link in links:
             link_errors.append(self._fetch_article(link))
-            break
+            # break
 
+        print(link_errors)
         with open(self.ERROR_LINKS_FILE, 'w') as file:
-            logging.info(f"Saving {len(link_errors)} link errors to file: {self.ERROR_LINKS_FILE}")
-            to_write = '\n'.join(link_errors)
+            logging.warning(f"Saving {len(link_errors)} link errors to file: {self.ERROR_LINKS_FILE}")
             if len(link_errors) > 0:
-                file.write(to_write)
-            file.write("")
+                for link in link_errors:
+                    file.write(link)
+            else:
+                file.write("")
+
 
     def _retry_error_links(self):
         assert os.path.exists(self.ERROR_LINKS_FILE) == True, f"Attempting to retry error links but {self.ERROR_LINKS_FILE} is not found"
@@ -177,6 +246,6 @@ class CNNSearchSpider(scrapy.Spider):
             error_links.append(self._fetch_article(link))
         
         with open(self.ERROR_LINKS_FILE, 'w') as file:
-            logging.error(f'Found {len(error_links)}. Rewriting to {self.ERROR_LINKS_FILE}')
+            logging.warning(f'Found {len(error_links)}. Rewriting to {self.ERROR_LINKS_FILE}')
             file.write('\n'.join(error_links))
         

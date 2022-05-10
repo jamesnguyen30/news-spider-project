@@ -1,0 +1,11 @@
+url:https://www.cnn.com/2022/05/02/investing/stocks-sell-may-go-away/index.html
+summary:New York (CNN Business) The S&P 500 fell more than 13% between January and April of this year.
+That's the worst four-month start to a year since 1939, when longtime legendary investor Warren Buffett was just nine years-old.
+Apple AAPL Comparing today's stock market to 83 years ago isn't an entirely apples-to-comparison — for one, the S&P was made up of only 90 companies back then.
+The Dow rose 84 points, or 0.3%, after falling more than 525 points earlier in the session.
+The CNN Business Fear & Greed Index , which measures seven indicators of market sentiment, was in Fear mode after briefly falling into Extreme Fear territory Monday.
+keywords:['points', 'start', 'dow', 'fear', 'worst', 'market', '1939', 'having', 'stock', 'sp', 'reference', 'falling', 'investors', 'nasdaq']
+top image:https://cdn.cnn.com/cnnnext/dam/assets/220502132128-stocks-sell-file-022622-super-tease.jpg
+authors:['Paul R. La Monica', 'Cnn Business']
+date:2022-05-02 00:00:00
+title:The S&P is having its worst start to a year since 1939

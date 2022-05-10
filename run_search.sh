@@ -1,5 +1,5 @@
 cd news_spider/news_spider
-scrapy crawl cnn_search_spider -a search_term=apple -a sections=business
+scrapy crawl cnn_search_spider -a search_term=apple -a sections=business -a start_date=today -a days_from_start_date=5
 # scrapy crawl cnn_search_spider -a search_term=tesla -a sections=business
 #scrapy crawl cnn_search_spider -a search_term=microsoft -a sections=business
 #scrapy crawl cnn_search_spider -a search_term=google -a sections=business
