@@ -201,7 +201,6 @@ class CNNSearchSpider(scrapy.Spider):
             html = file.read()
         
         soup = bs(html)
-        # h3_headlines = soup.find_all('h3', {'class': 'cnn-search__result-headline'})
         result_contents = soup.find_all('div', {'class':'cnn-search__result-contents'})
 
         links = list()

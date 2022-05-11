@@ -65,13 +65,13 @@ class Main():
                         print("Started crawler")
                         pool_data = (
                                 get_cnn_spider_data('apple', 'business'),
-                                # get_cnn_spider_data('tesla', 'business'),
-                                # get_cnn_spider_data('amazon', 'business'),
-                                # get_cnn_spider_data('microsoft', 'business'),
-                                # get_cnn_spider_data('nvidia', 'business'),
-                                # get_cnn_spider_data('amd', 'business'),
-                                # get_cnn_spider_data('google', 'business'),
-                                # get_cnn_spider_data('facebook', 'business'),
+                                get_cnn_spider_data('tesla', 'business'),
+                                get_cnn_spider_data('amazon', 'business'),
+                                get_cnn_spider_data('microsoft', 'business'),
+                                get_cnn_spider_data('nvidia', 'business'),
+                                get_cnn_spider_data('amd', 'business'),
+                                get_cnn_spider_data('google', 'business'),
+                                get_cnn_spider_data('facebook', 'business'),
                             ) 
                         with Pool() as pool:
                             res = pool.map(start_cnn_search, pool_data)
