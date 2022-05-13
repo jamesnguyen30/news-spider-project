@@ -72,15 +72,17 @@ def create_booking():
 
     print("select house your want:")
     house_ids = selected_owner.house_ids
+    houses = list()
 
     for index, house_id in enumerate(house_ids):
         id = str(house_id)
         house = Houses.objects(id = id).first()
+        houses.append(house)
         print(f'{index}. {house.address}')
     
     opt = int(input("Select house: "))
 
-    selected_house_id = house_ids[opt]
+    selected_house = houses[opt]
 
     booking = Bookings()
     booking.owner_id = selected_owner.id
