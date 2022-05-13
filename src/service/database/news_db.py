@@ -1,5 +1,5 @@
-from db.schemas import News
-from db import config
+from .db.schemas import News
+from .db import config
 from mongoengine import connect, disconnect
 
 class NewsDb():
@@ -11,7 +11,9 @@ class NewsDb():
         connect(alias = alias, name = name)
 
 
-    def save(self, title, text, authors, source, url, image_url = None, published_date = None) -> bool: 
+    def save(self, title, text, authors, source, url, \
+        image_url = None, published_date = None) -> bool: 
+
         to_save = News()
         if published_date != None:
             to_save.date = published_date 
@@ -30,14 +32,10 @@ class NewsDb():
     def get_by_id(id):
         news = News.objects(id = id)
         return news
+    
+    def get_by_title(title):
+        news = News.objects(title = title)
+        return news
 
     def close(self):
         disconnect()
-    
-
-
-
-
-        
-
-

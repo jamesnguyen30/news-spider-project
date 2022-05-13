@@ -1,34 +1,35 @@
 import subprocess
-from jmespath import search
 import pygame
 from pygame.locals import *
 import pygame_gui
 import os
 from multiprocessing import Pool
-import docker
+from collector.collector import NewsCollector
+# import docker
 
-SPLASH_DOCKER_NAME = 'splash'
 
-def start_cnn_search(data):
-    print('Started new process pid=', os.getpid())
-    proc = subprocess.Popen(f"scrapy crawl cnn_search_spider -a search_term={data['search_term']} -a sections={data['sections']} -a retry={data['retry']} -s LOG_ENABLED=False".split(" "),\
-            cwd='../news_spider/news_spider', stdout=subprocess.PIPE, encoding='utf-8')
-    proc.wait()
-    proc.poll()
-    print('completed with return code ', proc.returncode)
-    return proc.returncode
+# SPLASH_DOCKER_NAME = 'splash'
 
-def get_cnn_spider_data(search_term, sections, retry = False):
-    return {'search_term': search_term, 'sections': sections, 'retry': retry}
+# def start_cnn_search(data):
+#     print('Started new process pid=', os.getpid())
+#     proc = subprocess.Popen(f"scrapy crawl cnn_search_spider -a search_term={data['search_term']} -a sections={data['sections']} -a retry={data['retry']} -s LOG_ENABLED=False".split(" "),\
+#             cwd='./service/news_spider/news_spider', stdout=subprocess.PIPE, encoding='utf-8')
+#     proc.wait()
+#     proc.poll()
+#     print('completed with return code ', proc.returncode)
+#     return proc.returncode
 
-def start_splash():
-    client = docker.from_env()
-    if client.containers.get(SPLASH_DOCKER_NAME) == None:
-        client.containers.run('scrapinghub/splash', ports = {'8050': 8050}, name = 'splash')
-    container = client.containers.get(SPLASH_DOCKER_NAME)
+# def get_cnn_spider_data(search_term, sections, retry = False):
+#     return {'search_term': search_term, 'sections': sections, 'retry': retry}
 
-    for line in container.logs(stream=True):
-        print(line.strip())
+# def start_splash():
+#     client = docker.from_env()
+#     if client.containers.get(SPLASH_DOCKER_NAME) == None:
+#         client.containers.run('scrapinghub/splash', ports = {'8050': 8050}, name = SPLASH_DOCKER_NAME)
+#     container = client.containers.get(SPLASH_DOCKER_NAME)
+
+#     for line in container.logs(stream=True):
+#         print(line.strip())
 
 class Main():
     def __init__(self):
@@ -47,6 +48,8 @@ class Main():
         start_splash_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect(0,300,200,30), text='Start splash docker', manager = self.manager)
         # button2 = pygame_gui.elements.UIButton(relative_rect=pygame.Rect(0,300,150,30), text='CNN Search Tesla', manager = self.manager)
 
+        collector = NewsCollector()
+
         clock = pygame.time.Clock()
 
         is_running = True
@@ -58,23 +61,23 @@ class Main():
                 self.manager.process_events(event)
 
                 if event.type == pygame_gui.UI_BUTTON_PRESSED:
-                    if event.ui_element == start_splash_button:
-                        start_splash()
 
                     if event.ui_element == button1:
+
+
                         print("Started crawler")
                         pool_data = (
-                                get_cnn_spider_data('apple', 'business'),
-                                get_cnn_spider_data('tesla', 'business'),
-                                get_cnn_spider_data('amazon', 'business'),
-                                get_cnn_spider_data('microsoft', 'business'),
-                                get_cnn_spider_data('nvidia', 'business'),
-                                get_cnn_spider_data('amd', 'business'),
-                                get_cnn_spider_data('google', 'business'),
-                                get_cnn_spider_data('facebook', 'business'),
+                                collector.get_cnn_spider_data('apple', 'business'),
+                                collector.get_cnn_spider_data('tesla', 'business'),
+                                # collector.get_cnn_spider_data('amazon', 'business'),
+                                # collector.get_cnn_spider_data('microsoft', 'business'),
+                                # collector.get_cnn_spider_data('nvidia', 'business'),
+                                # collector.get_cnn_spider_data('amd', 'business'),
+                                # collector.get_cnn_spider_data('google', 'business'),
+                                # collector.get_cnn_spider_data('facebook', 'business'),
                             ) 
                         with Pool() as pool:
-                            res = pool.map(start_cnn_search, pool_data)
+                            res = pool.map(collector.start_cnn_search, pool_data)
                         
                         print(res)
 

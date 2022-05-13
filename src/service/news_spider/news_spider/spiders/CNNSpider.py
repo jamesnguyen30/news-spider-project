@@ -1,9 +1,5 @@
-from dataclasses import dataclass
-from gettext import install
-from selectors import EpollSelector
-import scrapy
 from scrapy_splash import SplashRequest
-from scrapy import cmdline
+import scrapy
 from bs4 import BeautifulSoup as bs
 import pathlib
 import os
@@ -17,6 +13,16 @@ from imp import reload
 import os
 import requests
 from bs4 import BeautifulSoup
+import sys
+import pathlib
+
+#append path to search for database service
+SERVICE_ROOT = pathlib.Path(__file__).parent.parent.parent.parent
+sys.path.append(str(SERVICE_ROOT))
+
+print(sys.path)
+
+from database import news_db
 
 nltk.download('punkt')
 
@@ -58,6 +64,9 @@ class CNNSearchSpider(scrapy.Spider):
         self.start_date = start_date
         self.days_from_start_date = int(days_from_start_date)
 
+        #Set up mongodb connection
+        self.db = news_db.NewsDb()
+
         # Configure default date to scrape
 
         if self.start_date == None or self.start_date.lower() == 'today':
@@ -82,16 +91,23 @@ class CNNSearchSpider(scrapy.Spider):
         self.HTML_LOG_DIR = os.path.join(self.LOG_DIR, 'html')
         self.META_DIR = os.path.join(self.OUTPUT_DIR, 'metadata')
         self.ERROR_LINKS_FILE = os.path.join(self.LOG_DIR, 'link_errors.log')
+        self.TITLE_SET_FILE = os.path.join(CWD, 'all_titles.obj')
         
         check_and_create_dir(self.OUTPUT_DIR)
         check_and_create_dir(self.META_DIR)
         check_and_create_dir(self.LOG_DIR)
         check_and_create_dir(self.HTML_LOG_DIR)
+        check_and_create_dir(self.TITLE_SET_FILE)
 
         reload(logging)
         stream_handler = logging.StreamHandler()
         stream_handler.setLevel(logging.WARNING)
-        logging.basicConfig(level = logging.INFO, handlers = [logging.FileHandler(self.LOG_FILE, mode= 'w'), stream_handler])
+        logging.basicConfig(level = logging.ERROR, handlers = [logging.FileHandler(self.LOG_FILE, mode= 'w'), stream_handler])
+
+        logging.info("checking info logging")
+        logging.warning("checking warning logging")
+        logging.error("checking error logging")
+
 
     def start_requests(self):
         if hasattr(self, 'retry'): 
@@ -160,6 +176,8 @@ class CNNSearchSpider(scrapy.Spider):
             meta_content.append(f'date:{article.publish_date}')
             meta_content.append(f'title:{article.title}')
 
+            self._save_to_db(article.title, article.text, article.authors, 'cnn', link, article.top_image, article.publish_date)
+
             meta_filename = f'{id}.{extension}'
             with open(os.path.join(self.META_DIR, meta_filename), 'w') as file:
                 file.write('\n'.join(meta_content))
@@ -221,7 +239,6 @@ class CNNSearchSpider(scrapy.Spider):
         link_errors = list()
         for link in links:
             link_errors.append(self._fetch_article(link))
-            # break
 
         print(link_errors)
         with open(self.ERROR_LINKS_FILE, 'w') as file:
@@ -248,3 +265,14 @@ class CNNSearchSpider(scrapy.Spider):
             logging.warning(f'Found {len(error_links)}. Rewriting to {self.ERROR_LINKS_FILE}')
             file.write('\n'.join(error_links))
         
+
+    def _save_to_db(self, title, text, authors, source, url, top_image_url, published_date):
+        try:
+            print('published date ', published_date)
+            self.db.save(title, text, authors, source, url, top_image_url, published_date)
+        except Exception as e:
+            logging.error("Failed to save to database, check below error")
+            logging.error(e)
+
+
+

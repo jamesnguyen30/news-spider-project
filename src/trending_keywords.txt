@@ -1,0 +1,17 @@
+apple
+gamestop
+nvidia
+sp500
+nasdaq
+bitcoin
+ethereum
+toyota
+subaru
+twitter
+tesla
+facebook
+uber
+recession
+gas
+crypto
+inflation
