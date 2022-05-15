@@ -71,6 +71,10 @@ class CNNSearchSpider(scrapy.Spider):
 
         if self.start_date == None or self.start_date.lower() == 'today':
             self.start_date = datetime.now()
+
+        elif self.start_date == 'yesterday':
+            self.start_date = datetime.now() - timedelta(days = 1)        
+
         else:
             self.start_date = datetime.strptime(self.start_date, '%m-%d-%Y')
         

@@ -29,13 +29,16 @@ class NewsDb():
 
         return to_save
     
-    def get_by_id(id):
+    def get_by_id(self, id):
         news = News.objects(id = id)
         return news
     
-    def get_by_title(title):
+    def get_by_title(self, title):
         news = News.objects(title = title)
         return news
+
+    def delete(self, obj):
+        obj.delete()
 
     def close(self):
         disconnect()

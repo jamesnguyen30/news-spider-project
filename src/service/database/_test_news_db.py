@@ -1,5 +1,5 @@
-from news_db import NewsDb
-from db.schemas import News 
+from .news_db import NewsDb
+from .db.schemas import News 
 from datetime import datetime
 import unittest
 
@@ -31,6 +31,9 @@ class TestNewsDatabase(unittest.TestCase):
         loadnews = News.objects(id = testobject.id).first()
         self.assertTrue(loadnews.title == testdata['title'])
 
+        controller.delete(testobject)
+
+        #Delete that data
         controller.close()
 
 
