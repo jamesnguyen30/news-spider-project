@@ -12,7 +12,7 @@ class Widget(tk.Frame):
 
 class ControllPanel(Widget):
 
-    def __init__(self, parent):
+    def __init__(self, parent, controller):
         Widget.__init__(self, parent)
         frame1 = tk.LabelFrame(self, text = 'Frame 1')
         frame1.place(rely = 0.05, relx = 0.02, height = 800, width = 400)
@@ -40,7 +40,7 @@ class ControllPanel(Widget):
         
         frame2 = tk.LabelFrame(self, text='Frame 2')
         frame2.place(rely = 0.05, relx = 0.5, height = 800, width=400)
-        button2 = tk.Button(frame2, text = 'Button 2', command = lambda: print("button 2 clickoed"))
+        button2 = tk.Button(frame2, text = 'Button 2', command = lambda: controller._start_scraper())
         button2.pack()
     
 class AnotherPanel(Widget):

@@ -1,45 +1,8 @@
 import tkinter as tk
-from widgets import ControllPanel, AnotherPanel
-from windows import NewWindow
-
-# class Widget(tk.Frame):
-#     def __init__(self, parent):
-#         tk.Frame.__init__(self, parent)
-
-#         self.main_frame = tk.Frame(self, bg = '#272727', height = 800, width = 800)
-#         self.main_frame.pack(fill='both', expand = 'true')
-#         self.main_frame.grid_columnconfigure(0, weight = 1)
-#         self.main_frame.grid_rowconfigure(0, weight = 1)
-
-# class ControllPanel(Widget):
-
-#     def __init__(self, parent):
-#         Widget.__init__(self, parent)
-#         frame1 = tk.LabelFrame(self, text = 'Frame 1')
-#         frame1.place(rely = 0.05, relx = 0.02, height = 300, width = 300)
-
-#         button1 = tk.Button(frame1, text = 'Button 1', command=lambda: print("hello"))
-#         button1.pack()
-
-# class NewWindow(tk.Tk):
-
-#     def  __init__(self, *args, **kwargs):
-#         tk.Tk.__init__(self, *args, **kwargs)
-
-#         main_frame = tk.Frame(self, bg = '#272727', height = 300, width = 300)
-
-#         main_frame.pack_propagate(0)
-#         main_frame.pack(fill = 'both', expand = 'true')
-
-#         self.geometry('300x300')
-#         self.resizable(0,0)
-#         self.title('New Window')
-
-#         label1 = tk.Label(main_frame, text = 'New Label')
-#         label1.grid(row = 1, column = 0)
-
-#         label2 = tk.Label(main_frame, text = "Label 2")
-#         label2.grid(row = 2, column = 0)
+from screens.widgets import ControllPanel, AnotherPanel
+from screens.windows import NewWindow
+from multiprocessing import Pool
+from collector.collector import NewsCollector
 
 class MenuBar(tk.Menu):
 
@@ -82,9 +45,12 @@ class MyApp(tk.Tk):
 
         self.show_controll_panel()
 
+        #init news collector
+        self.news_collector = NewsCollector()
+
     def show_controll_panel(self):
         print('shoing control panel')
-        frame = ControllPanel(self.main_frame)
+        frame = ControllPanel(self.main_frame, self)
         # frame.grid(row = 0, column = 0, sticky='nsew')
         # frame.tkraise()
         self._show_widget(frame)
@@ -97,6 +63,17 @@ class MyApp(tk.Tk):
     def _show_widget(self, widget):
         widget.grid(row = 0, column = 0, sticky = 'nsew')
         widget.tkraise()
+
+    def _start_scraper(self):
+        pool_data = [ 
+            self.news_collector.get_cnn_spider_data('apple', 'business', start_date = 'today', days_from_start_date=5), 
+            self.news_collector.get_cnn_spider_data('tesla', 'business', start_date = 'today', days_from_start_date=5), 
+        ]
+
+        with Pool() as pool:
+            res = pool.map(self.news_collector.start_cnn_search, pool_data)
+        
+        print(f"Completed processes with code {res}")
 
 if __name__ == '__main__':
     root = MyApp()

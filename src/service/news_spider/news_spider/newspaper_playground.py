@@ -6,7 +6,7 @@ import sys
 
 USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.41 Safari/537.36'
 
-link = 'https://www.cnn.com/2022/05/10/tech/match-group-google-lawsuit/index.html'
+link = 'https://www.cnn.com/2022/05/15/business/elon-musk-twitter-nda/index.html'
 
 def manually_get_text(link):
     html = requests.get(link)

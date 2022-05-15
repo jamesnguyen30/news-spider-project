@@ -234,9 +234,6 @@ class CNNSearchSpider(scrapy.Spider):
             if date_obj < self.end_date:
                 break
             links.append('https:' + href)
-        # for h3 in h3_headlines:
-        #     href = h3.find("a").attrs['href']
-        #     links.append("https:" + href)
 
         logging.info(f'found {len(links)} links before date: {self.end_date}')
 
