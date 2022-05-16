@@ -14,11 +14,8 @@ class ControllPanel(Widget):
 
     def __init__(self, parent, controller):
         Widget.__init__(self, parent)
-        frame1 = tk.LabelFrame(self, text = 'Frame 1')
+        frame1 = tk.LabelFrame(self, text = 'Running processes')
         frame1.place(rely = 0.05, relx = 0.02, height = 800, width = 400)
-
-        button1 = tk.Button(frame1, text = 'Button 1', command=lambda: print("hello"))
-        button1.pack()
 
         treeview = ttk.Treeview(frame1)
         col_names = ['ID', 'params', 'status']
