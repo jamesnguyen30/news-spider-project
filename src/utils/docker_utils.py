@@ -4,14 +4,13 @@ class SplashContainer():
 
     class ContainerNotRunningException(Exception):
         pass
+    SPLASH_DOCKER_NAME = 'splash'
+    container = None
 
     def  __init__(self):
-        self.SPLASH_DOCKER_NAME = 'splash'
-        self.container = None
         pass
 
     def start(self):
-
         client = docker.from_env()
         client.containers.run('scrapinghub/splash', ports = {'8050': 8050}, name = self.SPLASH_DOCKER_NAME, detach = True)
         self.container = client.containers.get(self.SPLASH_DOCKER_NAME)

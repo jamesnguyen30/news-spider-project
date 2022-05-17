@@ -106,10 +106,6 @@ class CNNSearchSpider(scrapy.Spider):
         stream_handler.setLevel(logging.WARNING)
         logging.basicConfig(level = logging.ERROR, handlers = [logging.FileHandler(self.LOG_FILE, mode= 'w'), stream_handler])
 
-        logging.info("checking info logging")
-        logging.warning("checking warning logging")
-        logging.error("checking error logging")
-
 
     def start_requests(self):
         if hasattr(self, 'retry'): 

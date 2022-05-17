@@ -1,9 +1,10 @@
 import tkinter as tk
 from screens.widgets import ControllPanel, AnotherPanel
 from screens.windows import NewWindow
-from multiprocessing import Pool, Manager
+from multiprocessing import Pool 
 from collector.collector import NewsCollector
 from utils.docker_utils import SplashContainer
+import os
 import time
 
 
@@ -37,13 +38,11 @@ class MyApp(tk.Tk):
     def __init__(self, *args, **kwargs):
 
         tk.Tk.__init__(self, *args, **kwargs)
-        self.main_frame = tk.Frame(self, bg = '#272727', height = 800, width = 1000)
-        # main_frame.geometry('800x600')
+        self.main_frame = tk.Frame(self, bg = '#272727', height = 1000, width = 2000)
         self.main_frame.pack_propagate(0)
         self.main_frame.pack(fill='both', expand = 'true')
         self.main_frame.grid_columnconfigure(0, weight = 1)
         self.main_frame.grid_rowconfigure(0, weight = 1)
-        self.logs = list()
 
         menubar = MenuBar(self)
         tk.Tk.config(self, menu = menubar)
@@ -52,6 +51,9 @@ class MyApp(tk.Tk):
         self.news_collector = NewsCollector()
         #init splash container 
         self.splash_container = SplashContainer()
+
+        self.splash_logs = list()
+
         self.show_controll_panel()
 
     def show_controll_panel(self):
@@ -80,44 +82,33 @@ class MyApp(tk.Tk):
         
         print(f"Completed processes with code {res}")
     
-    def task_done(self, result):
-        print(result)
+    def _add_log_to_controll_panel(self, text):
+        self.controll_panel.add_log(text)
     
+    def task_done(self, result):
+        self._add_log_to_controll_panel(f'[ DONE ] {str(result)}')
+
     def _start_scraper_async(self):
-        print('start scraper')
-        m = Manager()
-
-        done_procs = list()
-
-        proc_dict = m.dict()
-        pool_data = [ 
+        print("starting scrapers")
+        pool_data = [
             self.news_collector.get_cnn_spider_data('apple', 'business', start_date = 'today', days_from_start_date=5), 
             self.news_collector.get_cnn_spider_data('tesla', 'business', start_date = 'today', days_from_start_date=5), 
-            self.news_collector.get_cnn_spider_data('amazon', 'business', start_date = 'today', days_from_start_date=5), 
         ]
 
         pool = Pool()
-
+    
         for data in pool_data:
-            for data in pool_data:
-                pool.apply_async(self.news_collector.start_cnn_search, args = (data, proc_dict))
-            
-        while len(done_procs) < len(pool):
-            running_pids = [pid for pid, running in proc_dict.items() if running]
-            print("Running jobs ", running_pids)
-            time.sleep(1)
-
-        print("Done all tasks")
+            self._add_log_to_controll_panel(f'[ CNN Spider ],args: {str(data)}')
+            pool.apply_async(self.news_collector.start_cnn_search, (data,), callback=self.task_done)
+        
         pool.close()
+        print("end scraper")
 
     def _get_splash_container(self):
         return self.splash_container
     
     def _get_collector(self):
         return self.news_collector
-    
-    def _get_logs(self):
-        return self.logs
         
 
 if __name__ == '__main__':
