@@ -69,8 +69,6 @@ class ControllPanel(Widget):
             self.toggle_docker_status(self.docker_status)
 
         #call loop again
-        self.add_log('Test logggin')
-
         self.main_frame.after(1000, self.loop)
     
     def toggle_docker_status(self, is_running):

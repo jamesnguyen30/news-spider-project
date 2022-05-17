@@ -5,5 +5,21 @@
 Setting up with splash : https://github.com/scrapy-plugins/scrapy-splash
 youtube: https://www.youtube.com/watch?v=mTOXVRao3eA
 
+scraper in progress:
 
-*Note: Calling scrapy subprocess from Flask to scrape urls*
+Status: DONE
+CNN search: DONE
+
+Status: IN PROGRESS
+MarketWatch 
+
+Status: UP COMING
+
+Bloomberg
+Yahoo search
+Barrons.com
+Reuters
+
+API to use:
+
+NewsApi
