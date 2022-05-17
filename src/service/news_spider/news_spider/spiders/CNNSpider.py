@@ -95,13 +95,11 @@ class CNNSearchSpider(scrapy.Spider):
         self.HTML_LOG_DIR = os.path.join(self.LOG_DIR, 'html')
         self.META_DIR = os.path.join(self.OUTPUT_DIR, 'metadata')
         self.ERROR_LINKS_FILE = os.path.join(self.LOG_DIR, 'link_errors.log')
-        self.TITLE_SET_FILE = os.path.join(CWD, 'all_titles.obj')
         
         check_and_create_dir(self.OUTPUT_DIR)
         check_and_create_dir(self.META_DIR)
         check_and_create_dir(self.LOG_DIR)
         check_and_create_dir(self.HTML_LOG_DIR)
-        check_and_create_dir(self.TITLE_SET_FILE)
 
         reload(logging)
         stream_handler = logging.StreamHandler()
@@ -232,7 +230,7 @@ class CNNSearchSpider(scrapy.Spider):
             date = div.find('div', {'class': 'cnn-search__result-publish-date'}).find_all('span')[1].text
             date_obj = datetime.strptime(date, "%b %d, %Y")
             if date_obj < self.end_date:
-                break
+                continue
             links.append('https:' + href)
 
         logging.info(f'found {len(links)} links before date: {self.end_date}')

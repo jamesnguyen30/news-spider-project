@@ -1,8 +1,11 @@
 import tkinter as tk
 from screens.widgets import ControllPanel, AnotherPanel
 from screens.windows import NewWindow
-from multiprocessing import Pool
+from multiprocessing import Pool, Manager
 from collector.collector import NewsCollector
+from utils.docker_utils import SplashContainer
+import time
+
 
 class MenuBar(tk.Menu):
 
@@ -28,32 +31,34 @@ class MenuBar(tk.Menu):
 
         self.add_cascade(label = "Menu 2", menu = menu2)
 
+
 class MyApp(tk.Tk):
 
     def __init__(self, *args, **kwargs):
 
         tk.Tk.__init__(self, *args, **kwargs)
-        self.main_frame = tk.Frame(self, bg = '#272727', height = 800, width = 600)
+        self.main_frame = tk.Frame(self, bg = '#272727', height = 800, width = 1000)
         # main_frame.geometry('800x600')
         self.main_frame.pack_propagate(0)
         self.main_frame.pack(fill='both', expand = 'true')
         self.main_frame.grid_columnconfigure(0, weight = 1)
         self.main_frame.grid_rowconfigure(0, weight = 1)
+        self.logs = list()
 
         menubar = MenuBar(self)
         tk.Tk.config(self, menu = menubar)
 
-        self.show_controll_panel()
-
         #init news collector
         self.news_collector = NewsCollector()
+        #init splash container 
+        self.splash_container = SplashContainer()
+        self.show_controll_panel()
 
     def show_controll_panel(self):
         print('shoing control panel')
-        frame = ControllPanel(self.main_frame, self)
-        # frame.grid(row = 0, column = 0, sticky='nsew')
-        # frame.tkraise()
-        self._show_widget(frame)
+        self.controll_panel = ControllPanel(self.main_frame, self)
+        self._show_widget(self.controll_panel)
+        self.controll_panel.test_callback()
     
     def show_another_panel(self):
         print("showing another panel")
@@ -74,6 +79,46 @@ class MyApp(tk.Tk):
             res = pool.map(self.news_collector.start_cnn_search, pool_data)
         
         print(f"Completed processes with code {res}")
+    
+    def task_done(self, result):
+        print(result)
+    
+    def _start_scraper_async(self):
+        print('start scraper')
+        m = Manager()
+
+        done_procs = list()
+
+        proc_dict = m.dict()
+        pool_data = [ 
+            self.news_collector.get_cnn_spider_data('apple', 'business', start_date = 'today', days_from_start_date=5), 
+            self.news_collector.get_cnn_spider_data('tesla', 'business', start_date = 'today', days_from_start_date=5), 
+            self.news_collector.get_cnn_spider_data('amazon', 'business', start_date = 'today', days_from_start_date=5), 
+        ]
+
+        pool = Pool()
+
+        for data in pool_data:
+            for data in pool_data:
+                pool.apply_async(self.news_collector.start_cnn_search, args = (data, proc_dict))
+            
+        while len(done_procs) < len(pool):
+            running_pids = [pid for pid, running in proc_dict.items() if running]
+            print("Running jobs ", running_pids)
+            time.sleep(1)
+
+        print("Done all tasks")
+        pool.close()
+
+    def _get_splash_container(self):
+        return self.splash_container
+    
+    def _get_collector(self):
+        return self.news_collector
+    
+    def _get_logs(self):
+        return self.logs
+        
 
 if __name__ == '__main__':
     root = MyApp()

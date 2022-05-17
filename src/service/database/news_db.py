@@ -1,6 +1,6 @@
 from .db.schemas import News
 from .db import config
-from mongoengine import connect, disconnect
+from mongoengine import connect, disconnect, connection
 
 class NewsDb():
 
@@ -9,7 +9,6 @@ class NewsDb():
 
     def init_db(self, alias, name):
         connect(alias = alias, name = name)
-
 
     def save(self, title, text, authors, source, url, \
         image_url = None, published_date = None) -> bool: 
