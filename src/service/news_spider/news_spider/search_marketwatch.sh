@@ -1,0 +1,1 @@
+scrapy crawl market_watch_spider -a search_term=apple -a sections=business -a start-date=today -s ROBOTSTXT_OBEY=False

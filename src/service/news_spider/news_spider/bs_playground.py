@@ -6,6 +6,7 @@ import nltk
 import uuid
 import sys
 from datetime import datetime, timedelta
+import requests
 
 nltk.download('punkt')
 
@@ -20,59 +21,90 @@ if os.path.exists(OUTPUT_DIR) == False:
 
 print(f"Saving to {OUTPUT_DIR}")
 
-if __name__ == '__main__':
-    start_date = datetime.now()
-    length = 1
-    end_date = start_date - timedelta(days = length + 1)
-    end_date = end_date.replace(hour = 23, minute = 59, second = 59)
-    print('end date = ', end_date)
-
-    sample_file = os.path.join(CWD,'sample_cnn_search_page.html' )
-    with open(sample_file, 'r') as file:
+def _process_html_from_path(html_path):
+    with open(html_path, 'r') as file:
         html = file.read()
     
     soup = bs(html)
 
-    result_contents = soup.find_all('div', {'class':'cnn-search__result-contents'})
+    article_divs = soup.find_all('div', {'class':'element--article'})
 
-    links = list()
+    valid_links = list()
+    for div in article_divs:
+        h3 = div.find('h3', {'class': 'article__headline'})
+        href = h3.find('a', {'class': 'link'}).attrs['href']
+        if href == '#':
+            break
+        timestamp = int(div.attrs['data-timestamp'])//1000
+        valid_links.append({'timestamp': timestamp, 'link': href})
+        print(valid_links[-1])
+    
+    print(f"Got {len(valid_links)} links")
+    return valid_links
 
-    for div in result_contents:
-        href = div.find("h3", {'class': 'cnn-search__result-headline'}).find('a').attrs['href']
-        date = div.find('div', {'class': 'cnn-search__result-publish-date'}).find_all('span')[1].text
-        date_obj = datetime.strptime(date, "%b %d, %Y")
-        print(date_obj, f"if {date_obj} > {end_date}: {date_obj > end_date}")
-        links.append("https:" + href)
+def _fetch_articles(data):
+    # NOTE: newspaper can't parse date so timestamp was passed from html
+    link = data['link']
+    timestamp = data['timestamp']
 
-    print(links[0])
+    article = Article(link)
 
-    sys.exit(0)
+    article.download()
+    article.parse()
 
+    text = ''
+    processed_text = ''
+
+    #Process text
+    for line in article.text.split("\n"):
+        if line.startswith("Random reads") or line.startswith('Also read'):
+            break
+        if line == 'text None':
+            break
+        processed_text += line + '\n'
+    article.text = processed_text
+
+    text += f'link {link}\n'
+    text += f'title {article.title}\n'
+    text += f'text {article.text}\n'
+    text += f'authors {article.authors}\n'
+    text += f'date {datetime.fromtimestamp(timestamp)}\n'
+
+
+    # text += f'summary {article.summary}\n'
+    # text += f'keywords {article.keywords}\n'
+    # text += f'top image {article.top_image}\n'
+    # text += f'authors {article.authors}\n'
+    # text += f'date {datetime.fromtimestamp(timestamp)}\n'
+
+    text += "#######\n"
+    return text
+
+
+if __name__ == '__main__':
+    sample_file = os.path.join(CWD,'marketwatch_search.html' )
+
+    link = 'https://www.marketwatch.com/search?q=apple&ts=0&tab=All%20News&pageNumber=3'
+    response = requests.get(link)
+
+    html = response.text
+
+    with open('saved.html', 'w') as file:
+        file.write(html)
+
+    links = _process_html_from_path('saved.html')
+
+    text = list()
     for link in links:
-        article = Article(link)
-        article.download()
-        article.parse()
-        id = str(uuid.uuid4())
-        extension = 'txt'
-        filename = f'{id}_{article.title}.{extension}'
-        with open(os.path.join(OUTPUT_DIR, filename), 'w') as file:
-            file.write(article.text)
-        print(f'body: {article.text}')
+        try:
+            output = _fetch_articles(link)
+            print(output)
+            text.append(output)
+            break
+        except Exception as e:
+            print(str(e))
 
-        meta_content = list() 
-        article.nlp()
-        meta_content.append(f'url:{link}')
-        meta_content.append(f'summary:{article.summary}')
-        meta_content.append(f'keywords:{article.keywords}')
-        meta_content.append(f'top image:{article.top_image}')
-        meta_content.append(f'authors:{article.authors}')
-        meta_content.append(f'date:{article.publish_date}')
-        meta_content.append(f'title:{article.title}')
+    text = "\n".join(text)
 
-        print('\n'.join(meta_content))
-
-        meta_filename = f'{id}.{extension}'
-        with open(os.path.join(META_DIR, meta_filename), 'w') as file:
-            file.write('\n'.join(meta_content))
-
-        # with open(os.path.join(OUTPUT_DIR, ), )
+    with open('format_test.txt', 'w') as file:
+        file.write(text)

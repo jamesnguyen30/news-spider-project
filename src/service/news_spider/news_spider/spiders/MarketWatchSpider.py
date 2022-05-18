@@ -94,16 +94,12 @@ class MarketWatchSpider(scrapy.Spider):
         query = 'apple'
         tab = 'Articles'
         page = 1
-        # search_url = f'https://www.marketwatch.com/search?q={query}&ts=0&tab={tab}&pageNumber={page}'
-        # search_url = 'https://www.cnn.com/search?q=apple&size=10&sections=business'
-        search_url = 'https://www.marketwatch.com/search?q=apple&ts=0&tab=All%20News'
+        url = 'https://www.marketwatch.com/search?q=apple&ts=0&tab=Articles'
 
-        print(search_url)
-        yield SplashRequest(search_url, callback = self.parse, args = {'wait': 5})
+        yield SplashRequest(url, callback = self.parse, args = {'wait': 5})
     
     def parse(self, response):
         print("parsing response")
-        print(response.body)
         html_file = f"{response.url.split('/')[-1]}.html"
 
         html_saved_path = os.path.join(self.HTML_LOG_DIR,  html_file)
@@ -111,11 +107,126 @@ class MarketWatchSpider(scrapy.Spider):
             logging.info(f"Saved html to {html_saved_path}")
             file.write(response.body)
     
-        self._process_html_from_path(html_saved_path)
+        links = self._process_html_from_path(html_saved_path)
 
-    def _process_html_from_path(self, html_saved_path):
-        print('process')
+        for link in links:
+            try:
+                parsed_data = self._fetch_article(link)
+                self._save_article(parsed_data)
+            except Exception as e:
+                print(str(e))
+            finally:
+                break
 
+    def _process_html_from_path(self, html_path):
+        '''
+            parse html and return extracted links
+            @params
+                string html_path: path to html_file
+
+            @return 
+                [] valid_links: {'timestamp', 'link'}
+        '''
+        with open(html_path, 'r') as file:
+            html = file.read()
         
+        soup = bs(html)
+
+        article_divs = soup.find_all('div', {'class':'element--article'})
+
+        valid_links = list()
+        for div in article_divs:
+            h3 = div.find('h3', {'class': 'article__headline'})
+            href = h3.find('a', {'class': 'link'}).attrs['href']
+            if href == '#':
+                break
+            timestamp = int(div.attrs['data-timestamp'])//1000
+            valid_links.append({'timestamp': timestamp, 'link': href})
+            print(valid_links[-1])
+        
+        return valid_links
+    
+    def _fetch_article(self, link_data):
+        '''
+            Fetch article from link
+            @params
+                string link
+            @return
+                list of error links
+        '''
+
+        link = link_data['link']
+        timestamp = link_data['timestamp']
+        try:
+
+            article = Article(link)
+
+            article.download()
+            article.parse()
+
+            text = ''
+            processed_text = ''
+
+            for line in article.text.split("\n"):
+                if line.startswith("Random reads") or line.startswith('Also read'):
+                    break
+                if line == 'text None':
+                    break
+                processed_text += line + '\n'
+            article.text = processed_text
+
+            text += f'link {link}\n'
+            text += f'title {article.title}\n'
+            text += f'text {article.text}\n'
+            text += f'date {str(datetime.fromtimestamp(timestamp))}\n'
+            text += f'authors {article.authors}\n'
+            text += "#######\n"
+
+            print(text)
+
+            authors = list()
+            for author in article.authors:
+                authors.append(author)
+
+            return {
+                'url': link,
+                'title': article.title,
+                'text': article.text,
+                'date': str(datetime.fromtimestamp(timestamp)),
+                'authors': ','.join(authors),
+            }
+
+        except Exception as e:
+            print(str(e))
+            return link
+        
+    def _save_article(self, parsed_data):
+        id = str(uuid.uuid4())
+        extension = 'txt'
+        meta_filename = f'{id}.{extension}'
+
+        meta = list()
+        # only allow digits and alphabet characters
+        parsed_data['title'] = re.sub(r'[^a-zA-Z\s0-9]+', '', parsed_data['title'])
+
+        meta.append('url,' + parsed_data['url'])
+        meta.append('title,' + parsed_data['title'])
+        meta.append('date,' + parsed_data['date'])
+        meta.append('authors,' + parsed_data['authors'])
+
+        print(meta)
+
+        output_file = f"{id}_{parsed_data['title']}.{extension}"
+
+        with open(os.path.join(self.META_DIR, meta_filename), 'w') as file:
+            file.write('\n'.join(meta))
+        
+        with open(os.path.join(self.OUTPUT_DIR, output_file), 'w') as file:
+            file.write(parsed_data['text'])
+
+
+
+
+            
 
 
