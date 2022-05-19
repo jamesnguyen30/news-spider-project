@@ -7,26 +7,17 @@ import uuid
 import sys
 from datetime import datetime, timedelta
 import requests
+import json 
 
 nltk.download('punkt')
 
 CWD = pathlib.Path(__file__).parent.absolute()
-
-OUTPUT_DIR = os.path.join(CWD, 'dataset')
-META_DIR = os.path.join(OUTPUT_DIR, 'metadata')
-
-if os.path.exists(OUTPUT_DIR) == False:
-    os.mkdir(OUTPUT_DIR)
-    os.mkdir(META_DIR)
-
-print(f"Saving to {OUTPUT_DIR}")
 
 def _process_html_from_path(html_path):
     with open(html_path, 'r') as file:
         html = file.read()
     
     soup = bs(html)
-
 
 
 def _fetch_articles(link):
@@ -56,16 +47,52 @@ def _fetch_articles(link):
     text += "#######\n"
     return text
 
+def parse_article(article):
+    authors = list()
+    for author in article['authors']:
+        authors.append(author['name'])
+
+    data = {
+        'title': article['title'],
+        'description': article['description'],
+        'published_date': article['display_time'],
+        'url': f"https://www.reuters.com{article['canonical_url']}",
+        'authors': authors
+    }
+
+    return data
+
 
 if __name__ == '__main__':
-    sample_file = os.path.join(CWD,'marketwatch_search.html' )
-
-    link = 'https://www.reuters.com/site-search/?query=apple&section=business&offset=0'
+    link = 'https://www.reuters.com/pf/api/v3/content/fetch/articles-by-search-v2?query={"keyword":"apple","offset":10,"orderby":"display_date:desc","sections":"/business","size":10,"website":"reuters"}&d=95&_website=reuters'
     response = requests.get(link)
+    res = response.text
+    parsed = json.loads(res)
 
-    html = response.text
+    print(f'status code {str(parsed["statusCode"])}')
+    articles = parsed['result']['articles'] 
+    print(f'articles count {len(articles)}')
 
-    with open('saved.html', 'w') as file:
-        file.write(html)
+    to_save = list()
 
+    for article in articles:
+        data = parse_article(article)
+        article = Article(data['url'])
+        article.download()
+        article.parse()
+
+        data['text'] = article.text
+        data['top_image'] = article.top_image
+        data['publish_date'] = article.publish_date
+
+        print('Extracted data ' + str(data))
+
+        to_save.append(data)
+
+    save_file = os.path.join(CWD, 'saved.txt')
+    with open(save_file, 'w') as file:
+        for t in to_save:
+            file.write(str(t) + '\n')
+        
+    
 

@@ -1,5 +1,6 @@
-from scrapy_splash import SplashRequest
+# from scrapy_splash import SplashRequest
 import scrapy
+from scrapy import Request
 from bs4 import BeautifulSoup as bs
 import pathlib
 import os
@@ -11,10 +12,11 @@ from newspaper import Article
 import re
 from imp import reload
 import os
-import requests
 from bs4 import BeautifulSoup
 import sys
 import pathlib
+import json
+import requests
 
 SERVICE_ROOT = pathlib.Path(__file__).parent.parent.parent.parent
 sys.path.append(str(SERVICE_ROOT))
@@ -30,10 +32,10 @@ def check_and_create_dir(dir):
     if os.path.exists(dir) == False:
         os.makedirs(dir)
 
-class MarketWatchSpider(scrapy.Spider):
+class ReutersSpider(scrapy.Spider):
     '''
-        Depth-first Market watch search spider
-        website: marketwatch.com
+        Depth-first Reuters search spider
+        website: reuters.com
 
         @params:
             string search_term
@@ -46,11 +48,10 @@ class MarketWatchSpider(scrapy.Spider):
             list results
 
         NOTE: add -s ROBOTTXT_OBEY=False to scrape this website
-        sample: scrapy crawl market_watch_spider -a search_term=apple -a sections=business -a start-date=today -s ROBOTSTXT_OBEY=False
     '''
     name = 'reuters_spider'
     def __init__(self, search_term = None, sections = None, retry = False, start_date = None, days_from_start_date = 1 ,*args, **kwargs):
-        super(MarketWatchSpider, self).__init__(*args, **kwargs)
+        super(ReutersSpider, self).__init__(*args, **kwargs)
 
         self.search_term = search_term
         self.sections = sections
@@ -75,17 +76,17 @@ class MarketWatchSpider(scrapy.Spider):
         self.retry = retry
         # self.start_date = start_date
         # self.days_from_start_date = int(days_from_start_date)
-        self.OUTPUT_DIR = os.path.join(CWD, 'dataset', f'{self.search_term}_{self.sections}_{(self.start_date.strftime("%m_%d_%Y_%H_%M_%S"))}_MARTKETWATCH')
+        self.OUTPUT_DIR = os.path.join(CWD, 'dataset', f'{self.search_term}_{self.sections}_{(self.start_date.strftime("%m_%d_%Y_%H_%M_%S"))}_REUTERS')
         self.LOG_DIR = os.path.join(self.OUTPUT_DIR, 'log')
         self.LOG_FILE = os.path.join(self.LOG_DIR, f'_{self.search_term}_{self.sections}_{self.start_date.strftime("%m_%d_%Y_%H_%M_%S")}_log.txt')
-        self.HTML_LOG_DIR = os.path.join(self.LOG_DIR, 'html')
+        self.JSON_LOG_DIR = os.path.join(self.LOG_DIR, 'json')
         self.META_DIR = os.path.join(self.OUTPUT_DIR, 'metadata')
         self.ERROR_LINKS_FILE = os.path.join(self.LOG_DIR, 'link_errors.log')
 
         check_and_create_dir(self.OUTPUT_DIR)
         check_and_create_dir(self.META_DIR)
         check_and_create_dir(self.LOG_DIR)
-        check_and_create_dir(self.HTML_LOG_DIR)
+        check_and_create_dir(self.JSON_LOG_DIR)
 
         reload(logging)
         stream_handler = logging.StreamHandler()
@@ -96,9 +97,26 @@ class MarketWatchSpider(scrapy.Spider):
         self.db = news_db.NewsDb()
     
     def start_requests(self):
-        query = 'apple'
-        tab = 'Articles'
-        page = 1
-        url = 'https://www.marketwatch.com/search?q=apple&ts=0&tab=Articles'
+        '''
+        Reuters exposed its api for search so no need to use Splash request
+        '''
+        print("start request")
+        # url = f'https://www.reuters.com/site-search/?query={self.search_term}&section={self.sections}&offset=0'
+        url = 'https://www.reuters.com/pf/api/v3/content/fetch/articles-by-search-v2?query={"keyword":"' + self.search_term + '","offset":10,"orderby":"display_date:desc","sections":"/' + self.sections+ '","size":10,"website":"reuters"}&d=95&_website=reuters'
+        # yield Request(url, callback = self.parse)
+        yield Request(url, callback=self.parse)
+    
+    def parse(self, response):
+        # logging.info(f"Processing {response.url}")
+        now = datetime.now().strftime("%d-%m-%Y_%H:%M:%S")
 
-        yield SplashRequest(url, callback = self.parse, args = {'wait': 5})
+        json_file = f"{self.search_term}_{self.sections}_{now}.json"
+
+        json_saved_path = os.path.join(self.JSON_LOG_DIR,  json_file)
+        json_response = json.loads(response.body)
+
+        print(json_response)
+
+        with open(json_saved_path, 'w') as file:
+            logging.info(f"Saved html to {json_saved_path}")
+            json.dump(json_response, file)
