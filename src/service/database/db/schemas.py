@@ -4,8 +4,8 @@ from .config import *
 
 class News(mongoengine.Document):
     meta = {
-        'db_alias': TRENDING_DB_ALIAS,
-        'collection': TRENDING_DB
+        'db_alias': NEWS_DB,
+        'collection': NEWS_COLLECTION
     }
 
     date = mongoengine.DateTimeField(default = datetime.now())

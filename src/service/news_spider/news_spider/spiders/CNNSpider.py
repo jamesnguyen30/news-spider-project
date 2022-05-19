@@ -89,7 +89,7 @@ class CNNSearchSpider(scrapy.Spider):
 
         #Initiate directories
 
-        self.OUTPUT_DIR = os.path.join(CWD, 'dataset', f'{self.search_term}_{self.sections}_{get_date_format(self.start_date)}')
+        self.OUTPUT_DIR = os.path.join(CWD, 'dataset', f'{self.search_term}_{self.sections}_{get_date_format(self.start_date)}_CNN')
         self.LOG_DIR = os.path.join(self.OUTPUT_DIR, 'log')
         self.LOG_FILE = os.path.join(self.LOG_DIR, f'_{self.search_term}_{self.sections}_{get_date_format(self.start_date)}_log.txt')
         self.HTML_LOG_DIR = os.path.join(self.LOG_DIR, 'html')
@@ -166,13 +166,11 @@ class CNNSearchSpider(scrapy.Spider):
 
             meta_content = list() 
             article.nlp()
-            meta_content.append(f'url:{link}')
-            meta_content.append(f'summary:{article.summary}')
-            meta_content.append(f'keywords:{article.keywords}')
-            meta_content.append(f'top image:{article.top_image}')
-            meta_content.append(f'authors:{article.authors}')
-            meta_content.append(f'date:{article.publish_date}')
-            meta_content.append(f'title:{article.title}')
+            meta_content.append(f'url,{link}')
+            meta_content.append(f'title,{article.title}')
+            meta_content.append(f'authors,{article.authors}')
+            meta_content.append(f'date,{article.publish_date}')
+            meta_content.append(f'top_image,{article.top_image}')
 
             self._save_to_db(article.title, article.text, article.authors, 'cnn', link, article.top_image, article.publish_date)
 
@@ -261,10 +259,12 @@ class CNNSearchSpider(scrapy.Spider):
             file.write('\n'.join(error_links))
         
 
-    def _save_to_db(self, title, text, authors, source, url, top_image_url, published_date):
+    def _save_to_db(self, title, text, source = 'CNN', url = '', top_image_url = '', published_date = None, authors = 'na'):
         try:
-            print('published date ', published_date)
-            self.db.save(title, text, authors, source, url, top_image_url, published_date)
+            if self.db.get_by_title(title) == None:
+                self.db.save(title, text, authors, source, url, top_image_url, published_date)
+            else:
+                logging.warning(f"Article with title: {title} exists in the database. Skip save")
         except Exception as e:
             logging.error("Failed to save to database, check below error")
             logging.error(e)

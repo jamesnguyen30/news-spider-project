@@ -19,6 +19,8 @@ import pathlib
 SERVICE_ROOT = pathlib.Path(__file__).parent.parent.parent.parent
 sys.path.append(str(SERVICE_ROOT))
 
+from database import news_db
+
 nltk.download('punkt')
 
 CWD = pathlib.Path(__file__).parent.absolute()
@@ -35,7 +37,6 @@ class MarketWatchSpider(scrapy.Spider):
 
         @params:
             string search_term
-            string sections
             boolean retry = False (default)
             datetime start_date = datetime.now() (default), accept date format: 'm-d-yyyy' or quickly set 'today'
             int days_from_start_date = 1 (default)
@@ -44,14 +45,13 @@ class MarketWatchSpider(scrapy.Spider):
             list results
 
         NOTE: add -s ROBOTTXT_OBEY=False to scrape this website
-        sample: scrapy crawl market_watch_spider -a search_term=apple -a sections=business -a start-date=today -s ROBOTSTXT_OBEY=False
+        sample: scrapy crawl market_watch_spider -a search_term=apple -a start-date=today -s ROBOTSTXT_OBEY=False
     '''
     name = 'market_watch_spider'
-    def __init__(self, search_term = None, sections = None, retry = False, start_date = None, days_from_start_date = 1 ,*args, **kwargs):
+    def __init__(self, search_term = None, retry = False, start_date = None, days_from_start_date = 1 ,*args, **kwargs):
         super(MarketWatchSpider, self).__init__(*args, **kwargs)
 
         self.search_term = search_term
-        self.sections = sections
         self.start_date = start_date
         self.days_from_start_date = int(days_from_start_date)
 
@@ -71,11 +71,10 @@ class MarketWatchSpider(scrapy.Spider):
         self.end_date = self.end_date.replace(hour = 0, minute = 0, second = 0)
 
         self.retry = retry
-        # self.start_date = start_date
-        # self.days_from_start_date = int(days_from_start_date)
-        self.OUTPUT_DIR = os.path.join(CWD, 'dataset', f'{self.search_term}_{self.sections}_{(self.start_date.strftime("%m_%d_%Y_%H_%M_%S"))}')
+
+        self.OUTPUT_DIR = os.path.join(CWD, 'dataset', f'{self.search_term}_{(self.start_date.strftime("%m_%d_%Y_%H_%M_%S"))}_MARTKETWATCH')
         self.LOG_DIR = os.path.join(self.OUTPUT_DIR, 'log')
-        self.LOG_FILE = os.path.join(self.LOG_DIR, f'_{self.search_term}_{self.sections}_{self.start_date.strftime("%m_%d_%Y_%H_%M_%S")}_log.txt')
+        self.LOG_FILE = os.path.join(self.LOG_DIR, f'_{self.search_term}_{self.start_date.strftime("%m_%d_%Y_%H_%M_%S")}_log.txt')
         self.HTML_LOG_DIR = os.path.join(self.LOG_DIR, 'html')
         self.META_DIR = os.path.join(self.OUTPUT_DIR, 'metadata')
         self.ERROR_LINKS_FILE = os.path.join(self.LOG_DIR, 'link_errors.log')
@@ -88,24 +87,26 @@ class MarketWatchSpider(scrapy.Spider):
         reload(logging)
         stream_handler = logging.StreamHandler()
         stream_handler.setLevel(logging.WARNING)
-        logging.basicConfig(level = logging.ERROR, handlers = [logging.FileHandler(self.LOG_FILE, mode= 'w'), stream_handler])
+        logging.basicConfig(level = logging.INFO, handlers = [logging.FileHandler(self.LOG_FILE, mode= 'w'), stream_handler])
+
+        # Init db
+        self.db = news_db.NewsDb()
     
     def start_requests(self):
-        query = 'apple'
-        tab = 'Articles'
-        page = 1
-        url = 'https://www.marketwatch.com/search?q=apple&ts=0&tab=Articles'
+        url = f'https://www.marketwatch.com/search?q={self.search_term}&ts=0&tab=Articles'
+        print(f'url={url}')
 
         yield SplashRequest(url, callback = self.parse, args = {'wait': 5})
     
     def parse(self, response):
-        print("parsing response")
+        logging.info(f"Processing {response.url}")
         html_file = f"{response.url.split('/')[-1]}.html"
 
         html_saved_path = os.path.join(self.HTML_LOG_DIR,  html_file)
         with open(html_saved_path, 'wb') as file:
             logging.info(f"Saved html to {html_saved_path}")
             file.write(response.body)
+
     
         links = self._process_html_from_path(html_saved_path)
 
@@ -115,8 +116,6 @@ class MarketWatchSpider(scrapy.Spider):
                 self._save_article(parsed_data)
             except Exception as e:
                 print(str(e))
-            finally:
-                break
 
     def _process_html_from_path(self, html_path):
         '''
@@ -141,8 +140,16 @@ class MarketWatchSpider(scrapy.Spider):
             if href == '#':
                 break
             timestamp = int(div.attrs['data-timestamp'])//1000
-            valid_links.append({'timestamp': timestamp, 'link': href})
+
+            dateobj = datetime.fromtimestamp(timestamp)
+
+            if dateobj < self.end_date:
+                continue
+
+            valid_links.append({'published_date': dateobj, 'link': href})
             print(valid_links[-1])
+        
+        logging.info(f"Extracted {len(valid_links)} links")
         
         return valid_links
     
@@ -156,7 +163,7 @@ class MarketWatchSpider(scrapy.Spider):
         '''
 
         link = link_data['link']
-        timestamp = link_data['timestamp']
+        date = link_data['published_date']
         try:
 
             article = Article(link)
@@ -178,11 +185,9 @@ class MarketWatchSpider(scrapy.Spider):
             text += f'link {link}\n'
             text += f'title {article.title}\n'
             text += f'text {article.text}\n'
-            text += f'date {str(datetime.fromtimestamp(timestamp))}\n'
+            text += f'date {str(date)}\n'
             text += f'authors {article.authors}\n'
             text += "#######\n"
-
-            print(text)
 
             authors = list()
             for author in article.authors:
@@ -192,12 +197,14 @@ class MarketWatchSpider(scrapy.Spider):
                 'url': link,
                 'title': article.title,
                 'text': article.text,
-                'date': str(datetime.fromtimestamp(timestamp)),
-                'authors': ','.join(authors),
+                'date': str(date),
+                'authors': authors,
+                'top_image': article.top_image
             }
 
         except Exception as e:
-            print(str(e))
+            logging.error(f"Error while fetching article from {link}, check below error")
+            logging.error(str(e))
             return link
         
     def _save_article(self, parsed_data):
@@ -211,19 +218,45 @@ class MarketWatchSpider(scrapy.Spider):
 
         meta.append('url,' + parsed_data['url'])
         meta.append('title,' + parsed_data['title'])
+        meta.append('authors,' + '.'.join(parsed_data['authors']))
         meta.append('date,' + parsed_data['date'])
-        meta.append('authors,' + parsed_data['authors'])
-
-        print(meta)
+        meta.append('top_image,' + parsed_data['top_image'])
 
         output_file = f"{id}_{parsed_data['title']}.{extension}"
 
-        with open(os.path.join(self.META_DIR, meta_filename), 'w') as file:
-            file.write('\n'.join(meta))
-        
-        with open(os.path.join(self.OUTPUT_DIR, output_file), 'w') as file:
-            file.write(parsed_data['text'])
+        try:
+            with open(os.path.join(self.META_DIR, meta_filename), 'w') as file:
+                file.write('\n'.join(meta))
+            logging.info(f"Saved meta file {meta_filename}")
+        except Exception as e:
+            logging.error(f"Error while saving {meta_filename}")
 
+        try: 
+            with open(os.path.join(self.OUTPUT_DIR, output_file), 'w') as file:
+                file.write(parsed_data['text'])
+            logging.info(f"Saved to output file {output_file}")
+        except Exception as e:
+            logging.error(f"Error while saving {output_file}")
+            logging.error(str(e))
+
+        try:
+            self._save_to_db(parsed_data['title'], parsed_data['text'], 'MartketWatch',\
+                 parsed_data['url'], parsed_data['top_image'], parsed_data['date'], parsed_data['authors'])
+        except Exception as e:
+            logging.error("Error while saving to db")
+            logging.error(str(e))
+
+    def _save_to_db(self, title, text, source = 'CNN', url = '', top_image_url = '', published_date = None, authors = None):
+        try:
+            if self.db.get_by_title(title) == None:
+                if authors == None or len(authors) == 0:
+                    authors = ['na']
+                self.db.save(title, text, authors, source, url, top_image_url, published_date)
+            else:
+                logging.warning(f"Article with title: {title} exists in the database. Skip save")
+        except Exception as e:
+            logging.error("Failed to save to database, check below error")
+            logging.error(e)
 
 
 

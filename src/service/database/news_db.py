@@ -5,7 +5,7 @@ from mongoengine import connect, disconnect, connection
 class NewsDb():
 
     def __init__(self):
-        self.init_db(config.TRENDING_DB_ALIAS, config.TRENDING_DB)
+        self.init_db(config.NEWS_DB, config.NEWS_COLLECTION)
 
     def init_db(self, alias, name):
         connect(alias = alias, name = name)
@@ -33,7 +33,7 @@ class NewsDb():
         return news
     
     def get_by_title(self, title):
-        news = News.objects(title = title)
+        news = News.objects(title = title).first()
         return news
 
     def delete(self, obj):

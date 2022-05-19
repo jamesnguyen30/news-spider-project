@@ -27,26 +27,10 @@ def _process_html_from_path(html_path):
     
     soup = bs(html)
 
-    article_divs = soup.find_all('div', {'class':'element--article'})
 
-    valid_links = list()
-    for div in article_divs:
-        h3 = div.find('h3', {'class': 'article__headline'})
-        href = h3.find('a', {'class': 'link'}).attrs['href']
-        if href == '#':
-            break
-        timestamp = int(div.attrs['data-timestamp'])//1000
-        valid_links.append({'timestamp': timestamp, 'link': href})
-        print(valid_links[-1])
-    
-    print(f"Got {len(valid_links)} links")
-    return valid_links
 
-def _fetch_articles(data):
+def _fetch_articles(link):
     # NOTE: newspaper can't parse date so timestamp was passed from html
-    link = data['link']
-    timestamp = data['timestamp']
-
     article = Article(link)
 
     article.download()
@@ -68,14 +52,6 @@ def _fetch_articles(data):
     text += f'title {article.title}\n'
     text += f'text {article.text}\n'
     text += f'authors {article.authors}\n'
-    text += f'date {datetime.fromtimestamp(timestamp)}\n'
-
-
-    # text += f'summary {article.summary}\n'
-    # text += f'keywords {article.keywords}\n'
-    # text += f'top image {article.top_image}\n'
-    # text += f'authors {article.authors}\n'
-    # text += f'date {datetime.fromtimestamp(timestamp)}\n'
 
     text += "#######\n"
     return text
@@ -84,7 +60,7 @@ def _fetch_articles(data):
 if __name__ == '__main__':
     sample_file = os.path.join(CWD,'marketwatch_search.html' )
 
-    link = 'https://www.marketwatch.com/search?q=apple&ts=0&tab=All%20News&pageNumber=3'
+    link = 'https://www.reuters.com/site-search/?query=apple&section=business&offset=0'
     response = requests.get(link)
 
     html = response.text
@@ -92,19 +68,4 @@ if __name__ == '__main__':
     with open('saved.html', 'w') as file:
         file.write(html)
 
-    links = _process_html_from_path('saved.html')
 
-    text = list()
-    for link in links:
-        try:
-            output = _fetch_articles(link)
-            print(output)
-            text.append(output)
-            break
-        except Exception as e:
-            print(str(e))
-
-    text = "\n".join(text)
-
-    with open('format_test.txt', 'w') as file:
-        file.write(text)
