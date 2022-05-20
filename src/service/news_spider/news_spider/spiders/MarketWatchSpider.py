@@ -48,12 +48,13 @@ class MarketWatchSpider(scrapy.Spider):
         sample: scrapy crawl market_watch_spider -a search_term=apple -a start-date=today -s ROBOTSTXT_OBEY=False
     '''
     name = 'market_watch_spider'
-    def __init__(self, search_term = None, retry = False, start_date = None, days_from_start_date = 1 ,*args, **kwargs):
+    def __init__(self, search_term = None, sections=None, retry = False, start_date = None, days_from_start_date = 1 ,*args, **kwargs):
         super(MarketWatchSpider, self).__init__(*args, **kwargs)
 
         self.search_term = search_term
         self.start_date = start_date
         self.days_from_start_date = int(days_from_start_date)
+        self.sections = sections
 
         if self.start_date == None or self.start_date.lower() == 'today':
             self.start_date = datetime.now()
@@ -246,7 +247,7 @@ class MarketWatchSpider(scrapy.Spider):
             logging.error("Error while saving to db")
             logging.error(str(e))
 
-    def _save_to_db(self, title, text, source = 'CNN', url = '', top_image_url = '', published_date = None, authors = None):
+    def _save_to_db(self, title, text, source = 'MarketWatch', url = '', top_image_url = '', published_date = None, authors = None):
         try:
             if self.db.get_by_title(title) == None:
                 if authors == None or len(authors) == 0:

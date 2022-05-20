@@ -38,7 +38,7 @@ def get_date_format(date, date_only=False):
         return f'{date.month}_{date.day}_{date.year}'
     return f'{date.month}_{date.day}_{date.year}_{date.hour}H_{date.minute}M'
 
-class CNNSearchSpider(scrapy.Spider):
+class CnnSpider(scrapy.Spider):
     '''
         Depth-first CNN search spider
         specifically search for keyword
@@ -52,10 +52,10 @@ class CNNSearchSpider(scrapy.Spider):
         @returns
             list results
     '''
-    name = 'cnn_search_spider'
+    name = 'cnn_spider'
 
     def __init__(self, search_term =None, sections = None, retry = False, start_date = None, days_from_start_date = None, *args, **kwargs, ):
-        super(CNNSearchSpider, self).__init__(*args, **kwargs)
+        super(CnnSpider, self).__init__(*args, **kwargs)
 
         # Configure search params
         self.search_term = search_term
@@ -172,7 +172,7 @@ class CNNSearchSpider(scrapy.Spider):
             meta_content.append(f'date,{article.publish_date}')
             meta_content.append(f'top_image,{article.top_image}')
 
-            self._save_to_db(article.title, article.text, article.authors, 'cnn', link, article.top_image, article.publish_date)
+            self._save_to_db(article.title, article.text, article.authors, 'CNN', link, article.top_image, article.publish_date)
 
             meta_filename = f'{id}.{extension}'
             with open(os.path.join(self.META_DIR, meta_filename), 'w') as file:

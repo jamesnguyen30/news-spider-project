@@ -215,9 +215,21 @@ class ReutersSpider(scrapy.Spider):
 
         # save to database
 
-        # try:
-        #     self._save_to_db(parsed_data['title'], parsed_data['text'], 'MartketWatch',\
-        #          parsed_data['url'], parsed_data['top_image'], parsed_data['date'], parsed_data['authors'])
-        # except Exception as e:
-        #     logging.error("Error while saving to db")
-        #     logging.error(str(e))
+        try:
+            self._save_to_db(parsed_data['title'], parsed_data['text'], 'Reuters',\
+                 parsed_data['url'], parsed_data['top_image'], parsed_data['date'], parsed_data['authors'])
+        except Exception as e:
+            logging.error("Error while saving to db")
+            logging.error(str(e))
+
+    def _save_to_db(self, title, text, source = 'Reuters', url = '', top_image_url = '', published_date = None, authors = None):
+        try:
+            if self.db.get_by_title(title) == None:
+                if authors == None or len(authors) == 0:
+                    authors = ['na']
+                self.db.save(title, text, authors, source, url, top_image_url, published_date)
+            else:
+                logging.warning(f"Article with title: {title} exists in the database. Skip save")
+        except Exception as e:
+            logging.error("Failed to save to database, check below error")
+            logging.error(e)

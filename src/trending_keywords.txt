@@ -15,3 +15,8 @@ recession
 gas
 crypto
 inflation
+amazon
+microsoft
+sony
+playstation
+

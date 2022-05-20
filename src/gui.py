@@ -4,8 +4,7 @@ from screens.windows import NewWindow
 from multiprocessing import Pool 
 from collector.collector import NewsCollector
 from utils.docker_utils import SplashContainer
-import os
-import time
+import subprocess
 
 
 class MenuBar(tk.Menu):
@@ -34,6 +33,7 @@ class MenuBar(tk.Menu):
 
 
 class MyApp(tk.Tk):
+    TRENDING_KEYWORDS_FILE = 'trending_keywords.txt'
 
     def __init__(self, *args, **kwargs):
 
@@ -56,11 +56,17 @@ class MyApp(tk.Tk):
 
         self.show_controll_panel()
 
+        self.scraper_running = None 
+        self.extracting_keyword = None
+        self.is_splash_running = None 
+
+        self.main_frame.after(1000, self._loop)
+
     def show_controll_panel(self):
         print('shoing control panel')
-        self.controll_panel = ControllPanel(self.main_frame, self)
-        self._show_widget(self.controll_panel)
-        self.controll_panel.test_callback()
+        self.control_panel = ControllPanel(self.main_frame, self)
+        self._show_widget(self.control_panel)
+        self.control_panel.test_callback()
     
     def show_another_panel(self):
         print("showing another panel")
@@ -71,19 +77,19 @@ class MyApp(tk.Tk):
         widget.grid(row = 0, column = 0, sticky = 'nsew')
         widget.tkraise()
 
-    def _start_scraper(self):
-        pool_data = [ 
-            self.news_collector.get_cnn_spider_data('apple', 'business', start_date = 'today', days_from_start_date=5), 
-            self.news_collector.get_cnn_spider_data('tesla', 'business', start_date = 'today', days_from_start_date=5), 
-        ]
+    # def _start_scraper(self):
+    #     pool_data = [ 
+    #         self.news_collector.get_cnn_spider_data('apple', 'business', start_date = 'today', days_from_start_date=5), 
+    #         self.news_collector.get_cnn_spider_data('tesla', 'business', start_date = 'today', days_from_start_date=5), 
+    #     ]
 
-        with Pool() as pool:
-            res = pool.map(self.news_collector.start_cnn_search, pool_data)
+    #     with Pool() as pool:
+    #         res = pool.map(self.news_collector.start_cnn_search, pool_data)
         
-        print(f"Completed processes with code {res}")
+    #     print(f"Completed processes with code {res}")
     
     def _add_log_to_controll_panel(self, text):
-        self.controll_panel.add_log(text)
+        self.control_panel.add_log(text)
     
     def task_done(self, result):
         self._add_log_to_controll_panel(f'[ DONE ] {str(result)}')
@@ -91,15 +97,20 @@ class MyApp(tk.Tk):
     def _start_scraper_async(self):
         print("starting scrapers")
         pool_data = [
-            self.news_collector.get_cnn_spider_data('apple', 'business', start_date = 'today', days_from_start_date=5), 
-            self.news_collector.get_cnn_spider_data('tesla', 'business', start_date = 'today', days_from_start_date=5), 
+            # self.news_collector.get_cnn_spider_data('apple', 'business', start_date = 'today', days_from_start_date=5), 
+            # self.news_collector.get_cnn_spider_data('tesla', 'business', start_date = 'today', days_from_start_date=5), 
+            self.news_collector.get_spider_data('apple', 'business', False, 'today', 1)
         ]
 
         pool = Pool()
     
         for data in pool_data:
             self._add_log_to_controll_panel(f'[ CNN Spider ],args: {str(data)}')
-            pool.apply_async(self.news_collector.start_cnn_search, (data,), callback=self.task_done)
+            pool.apply_async(self.news_collector.start_search_process, (data, 'cnn_search_spider'), callback=self.task_done)
+            self._add_log_to_controll_panel(f'[ MarketWatcher spider ],args: {str(data)}')
+            pool.apply_async(self.news_collector.start_search_process, (data, 'market_watch_spider'), callback=self.task_done)
+            self._add_log_to_controll_panel(f'[ Reuters Spider ],args: {str(data)}')
+            pool.apply_async(self.news_collector.start_search_process, (data, 'reuters_spider'), callback=self.task_done)
         
         pool.close()
         print("end scraper")
@@ -109,7 +120,34 @@ class MyApp(tk.Tk):
     
     def _get_collector(self):
         return self.news_collector
+
+    def start_splash(self):
+        if self.splash_container.is_running() == False:
+            self.control_panel.add_log("Splash container started by user")
+            self.splash_container.start()
+        else:
+            self.control_panel.add_log("Splash container started by user but it's already running")
+
+    def stop_splash(self):
+        if self.splash_container.is_running() == True:
+            print("Stopping splash ...")
+            self.control_panel.add_log("Splash container stopped by user")
+            # Using subprocess because Docker SDK has the following issue:
+            # stop command sent but docker container not stopped,
+            # it doesn't show up in 'docker ps' but you can 
+            # 'docker logs -f splash' and see it's running  
+            # self.splash_container.stop()
+            # this is a temporary solution
+            subprocess.run('docker rm -f splash'.split(" "))
+    
+    def _loop(self):
+        is_running = self.splash_container.is_running()
+
+        if is_running != self.is_splash_running:
+            self.is_splash_running = is_running
+            self.control_panel.toggle_docker_status(self.is_splash_running)
         
+        self.main_frame.after(1000, self._loop)
 
 if __name__ == '__main__':
     root = MyApp()

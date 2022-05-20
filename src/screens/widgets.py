@@ -1,6 +1,5 @@
 import tkinter as tk
 # from tkinter import ttk
-import subprocess
 from datetime import datetime
 
 class Widget(tk.Frame):
@@ -30,9 +29,6 @@ class ControllPanel(Widget):
 
         self.listbox = tk.Listbox(frame1, width=100)
 
-        # for i in range(20):
-        #     self.listbox.insert("end", f"TIME=00:00:00 12:35:33, PID={i}, STATUS=running, PARAMS=default")
-
         self.listbox.pack(side = 'left', fill='both', expand = True)
 
         start_splash_button = tk.Button(frame2, text = 'start splash', command = self.start_splash)
@@ -53,23 +49,11 @@ class ControllPanel(Widget):
         self.docker_status = None
         self.add_log('Checking splash container ...')
         
-        self.main_frame.after(1000, self.loop)
-    
     def test_callback(self):
         print("test callback called")
     
     def start_scraper(self):
         self.controller._start_scraper_async()
-    
-    def loop(self):
-        status = self.splash_container.is_running()
-
-        if status != self.docker_status:
-            self.docker_status = status
-            self.toggle_docker_status(self.docker_status)
-
-        #call loop again
-        self.main_frame.after(1000, self.loop)
     
     def toggle_docker_status(self, is_running):
         if is_running:
@@ -78,28 +62,12 @@ class ControllPanel(Widget):
         else:
             self.docker_running_status_label.config(text = "Splash status: NOT RUNNING")
             self.add_log("Splash container is not running")
-
-    def start_splash(self):
-        if self.splash_container.is_running() == False:
-            self.add_log("Splash container started by user")
-            self.splash_container.start()
-        else:
-            self.add_log("Splash container started by user but it's already running")
-
-    def stop_splash(self):
-        if self.splash_container.is_running() == True:
-            print("Stopping splash ...")
-            self.add_log("Splash container stopped by user")
-            # Using subprocess because Docker SDK has the following issue:
-            # stop command sent but docker container not stopped,
-            # it doesn't show up in 'docker ps' but you can 
-            # 'docker logs -f splash' and see it's running  
-            # self.splash_container.stop()
-            # this is a temporary solution
-            subprocess.run('docker rm -f splash'.split(" "))
     
-    # def get_running_spider_logs(self):
-    #     return self.controller._get_logs()
+    def start_splash(self):
+        self.controller.start_splash()
+    
+    def stop_splash(self):
+        self.controller.stop_splash()
 
     def clear_log(self):
         self.listbox.delete(0, 'end')
