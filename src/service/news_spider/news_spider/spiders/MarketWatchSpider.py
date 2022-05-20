@@ -209,6 +209,11 @@ class MarketWatchSpider(scrapy.Spider):
             return link
         
     def _save_article(self, parsed_data):
+
+        # if self.db.get_by_title(parsed_data['title']) is not None:
+        #     logging.warning(f"Skipping article '{parsed_data['title']}' because it's already saved in database")
+        #     return
+
         id = str(uuid.uuid4())
         extension = 'txt'
         meta_filename = f'{id}.{extension}'
@@ -249,10 +254,13 @@ class MarketWatchSpider(scrapy.Spider):
 
     def _save_to_db(self, title, text, source = 'MarketWatch', url = '', top_image_url = '', published_date = None, authors = None):
         try:
-            if self.db.get_by_title(title) == None:
+            news = self.db.get_by_title(title)
+
+            #If the title doens't exist in database or this is a different search term
+            if news == None or news.search_term != self.search_term:
                 if authors == None or len(authors) == 0:
                     authors = ['na']
-                self.db.save(title, text, authors, source, url, top_image_url, published_date)
+                self.db.save(self.search_term, title, text, authors, source, url, top_image_url, published_date)
             else:
                 logging.warning(f"Article with title: {title} exists in the database. Skip save")
         except Exception as e:

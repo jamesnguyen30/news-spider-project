@@ -18,14 +18,30 @@ class ControllPanel(Widget):
 
         self.splash_container = controller._get_splash_container()
 
-        frame1 = tk.LabelFrame(self.main_frame, text = 'Running processes', width = 1500, height = 400)
+        frame1 = tk.LabelFrame(self.main_frame, text = 'Running processes', width = 1000, height = 400)
         frame1.grid(column = 0, row = 0, sticky='nsew')
 
-        frame2 = tk.LabelFrame(self.main_frame, text='Docker logs', width = 500, height = 400)
+        frame2 = tk.LabelFrame(self.main_frame, text='Docker logs', width = 1000, height = 400)
         frame2.grid(column = 1, row = 0, sticky = 'nswe')
 
-        frame3 = tk.LabelFrame(self.main_frame, bg = 'green', text = 'Control panel', width = 1500, height = 400)
+
+        frame3 = tk.LabelFrame(self.main_frame, bg = 'green', text = 'Control panel', width = 1000, height = 400)
         frame3.grid(column = 0, row = 1, sticky='nswe')
+
+        frame4 = tk.LabelFrame(self.main_frame, text = 'trending keywords', width = 1000, height = 400)
+        frame4.grid(column = 1, row = 1, sticky='nswe')
+
+        self.trending_keywords_list = tk.Listbox(frame4, width = 50)
+        self.trending_keywords_list.pack(side = 'left', fill='y')
+
+        self.trending_keywords_scrollbar = tk.Scrollbar(frame4)
+        self.trending_keywords_scrollbar.pack(side = 'right', fill = 'y')
+
+        self.trending_keywords_list.configure(yscrollcommand=self.trending_keywords_scrollbar.set)
+        self.trending_keywords_scrollbar.configure(command = self.trending_keywords_list.yview)
+
+        for _ in range(100):
+            self.trending_keywords_list.insert('end', 'test')
 
         self.listbox = tk.Listbox(frame1, width=100)
 
@@ -53,7 +69,7 @@ class ControllPanel(Widget):
         print("test callback called")
     
     def start_scraper(self):
-        self.controller._start_scraper_async()
+        self.controller.start_scraping_trending_keywords()
     
     def toggle_docker_status(self, is_running):
         if is_running:
@@ -76,6 +92,29 @@ class ControllPanel(Widget):
         now = datetime.now()
         self.listbox.insert('end', f'{now.strftime("%m-%d-%Y : %H:%M:%S")} : {text}')
         self.listbox.see('end')
+    
+    def add_trending_keywords(self, data):
+        '''
+        data format:
+        keyword
+        count
+        date
+        '''
+        # date_string = data['date'].strftime("")
+        date_string = data['date'].strftime('%m-%d-%Y %H:%M:%S')
+        self.trending_keywords_list.insert('end', f"{date_string} | count: {data['count']} | keyword: {data['keyword']}")
+
+    def clear_trending_keywords(self):
+        self.trending_keywords_list.delete(0, 'end')
+
+    def update_trending_keywords(self, keyword_list: list()):
+        self.clear_trending_keywords()
+        for item in keyword_list:
+            self.add_trending_keywords(item)
+
+    def update_scraping_keywords_index(self, index):
+        # Highlight the scraping keyword
+        self.trending_keywords_list.activate(index)
 
 class AnotherPanel(Widget):
     def __init__(self, parent):

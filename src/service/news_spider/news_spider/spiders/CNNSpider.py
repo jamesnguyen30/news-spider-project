@@ -164,23 +164,28 @@ class CnnSpider(scrapy.Spider):
             with open(os.path.join(self.OUTPUT_DIR, filename), 'w') as file:
                 file.write(article.text)
 
+            #Convert article publish date
             meta_content = list() 
             article.nlp()
             meta_content.append(f'url,{link}')
             meta_content.append(f'title,{article.title}')
             meta_content.append(f'authors,{article.authors}')
-            meta_content.append(f'date,{article.publish_date}')
+            meta_content.append(f'date, {article.publish_date}')
             meta_content.append(f'top_image,{article.top_image}')
 
-            self._save_to_db(article.title, article.text, article.authors, 'CNN', link, article.top_image, article.publish_date)
+            self._save_to_db(article.title, article.text, 'CNN',link, article.top_image, article.publish_date, article.authors)
+
+            # if self.db.get_by_title(article.title) is not None:
+            #     logging.warning(f"Skipping article '{article.title}' because it's already saved in database")
+            #     return
 
             meta_filename = f'{id}.{extension}'
             with open(os.path.join(self.META_DIR, meta_filename), 'w') as file:
                 file.write('\n'.join(meta_content))
-            
             logging.info(f"Saved to {self.OUTPUT_DIR} and metadata to {self.META_DIR}")
         except Exception as e:
-            logging.error(f'An error happend at link: {link}. Saving to error-links.log')
+            logging.error(f'An error happend. check below')
+            logging.error(str(e))
             link_errors.append(link)
         finally:
             return link_errors
@@ -231,7 +236,8 @@ class CnnSpider(scrapy.Spider):
 
         link_errors = list()
         for link in links:
-            link_errors.append(self._fetch_article(link))
+            for error_link in self._fetch_article(link):
+                link_errors.append(error_link)
 
         print(link_errors)
         with open(self.ERROR_LINKS_FILE, 'w') as file:
@@ -259,15 +265,20 @@ class CnnSpider(scrapy.Spider):
             file.write('\n'.join(error_links))
         
 
-    def _save_to_db(self, title, text, source = 'CNN', url = '', top_image_url = '', published_date = None, authors = 'na'):
-        try:
-            if self.db.get_by_title(title) == None:
-                self.db.save(title, text, authors, source, url, top_image_url, published_date)
-            else:
-                logging.warning(f"Article with title: {title} exists in the database. Skip save")
-        except Exception as e:
-            logging.error("Failed to save to database, check below error")
-            logging.error(e)
+    def _save_to_db(self, title:str, text:str, source:str = 'CNN', url:str = '', top_image_url:str = '', published_date:datetime = None, authors:str = None):
+        news = self.db.get_by_title(title)
+        #If the title doens't exist in database or this is a different search term
+        print('published date ' , published_date)
+        if news == None or news.search_term != self.search_term:
+            if authors == None or len(authors) == 0:
+                authors = ['na']
+            try:
+                self.db.save(self.search_term, title, text, authors, source, url, top_image_url, published_date)
+            except Exception as e:
+                logging.error("Failed to save to database, check below error")
+                logging.error(e)
+        else:
+            logging.warning(f"Article with title: {title} exists in the database. Skip save")
 
 
 

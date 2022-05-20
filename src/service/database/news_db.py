@@ -1,6 +1,8 @@
+from jmespath import search
 from .db.schemas import News
 from .db import config
-from mongoengine import connect, disconnect, connection
+from mongoengine import connect, disconnect
+from datetime import datetime
 
 class NewsDb():
 
@@ -10,13 +12,15 @@ class NewsDb():
     def init_db(self, alias, name):
         connect(alias = alias, name = name)
 
-    def save(self, title, text, authors, source, url, \
-        image_url = None, published_date = None) -> bool: 
+    def save(self, search_term,  title, text, authors, source, url, \
+        image_url, date) -> bool: 
 
         to_save = News()
-        if published_date != None:
-            to_save.date = published_date 
-        
+        to_save.date = date 
+
+        print("date = ", str(date))
+
+        to_save.search_term = search_term 
         to_save.title = title 
         to_save.text = text 
         to_save.authors = authors
@@ -32,7 +36,7 @@ class NewsDb():
         news = News.objects(id = id)
         return news
     
-    def get_by_title(self, title):
+    def get_by_title(self, title) -> News:
         news = News.objects(title = title).first()
         return news
 

@@ -7,7 +7,7 @@ class News(mongoengine.Document):
         'db_alias': NEWS_DB,
         'collection': NEWS_COLLECTION
     }
-
+    search_term = mongoengine.StringField(required = True)
     date = mongoengine.DateTimeField(default = datetime.now())
     title = mongoengine.StringField(required = True)
     text = mongoengine.StringField(required = True)

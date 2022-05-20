@@ -117,6 +117,10 @@ class ReutersSpider(scrapy.Spider):
             'authors': authors
         }
 
+        # if self.db.get_by_title(data['title']) is not None:
+        #     logging.warning(f"Skipping article '{data['title']}' because it's already saved in database")
+        #     return
+
         dateobj = datetime.strptime(article['display_time'], "%Y-%m-%dT%H:%M:%S%z")
         dateobj = dateobj.replace(tzinfo = None)
 
@@ -224,10 +228,13 @@ class ReutersSpider(scrapy.Spider):
 
     def _save_to_db(self, title, text, source = 'Reuters', url = '', top_image_url = '', published_date = None, authors = None):
         try:
-            if self.db.get_by_title(title) == None:
+            news = self.db.get_by_title(title)
+
+            #If the title doens't exist in database or this is a different search term
+            if news == None or news.search_term != self.search_term:
                 if authors == None or len(authors) == 0:
                     authors = ['na']
-                self.db.save(title, text, authors, source, url, top_image_url, published_date)
+                self.db.save(self.search_term, title, text, authors, source, url, top_image_url, published_date)
             else:
                 logging.warning(f"Article with title: {title} exists in the database. Skip save")
         except Exception as e:

@@ -5,7 +5,9 @@ from multiprocessing import Pool
 from collector.collector import NewsCollector
 from utils.docker_utils import SplashContainer
 import subprocess
-
+import pathlib
+import os
+from datetime import datetime
 
 class MenuBar(tk.Menu):
 
@@ -33,7 +35,8 @@ class MenuBar(tk.Menu):
 
 
 class MyApp(tk.Tk):
-    TRENDING_KEYWORDS_FILE = 'trending_keywords.txt'
+    CWD = pathlib.Path(__file__).parent.absolute()
+    TRENDING_KEYWORDS_FILE = os.path.join(CWD, 'trending_keywords.txt')
 
     def __init__(self, *args, **kwargs):
 
@@ -57,10 +60,32 @@ class MyApp(tk.Tk):
         self.show_controll_panel()
 
         self.scraper_running = None 
-        self.extracting_keyword = None
+        self.trending_keywords = list()
+        self.current_keyword_index = None
         self.is_splash_running = None 
 
+        self.load_trending_keywords()
+
+        self.spider_names = ['cnn_spider', 'market_watch_spider', 'reuters_spider']
+        # self.spider_names = ['cnn_spider']
+        self.tasks_done = None
+
+        self.scraping_hours = self._get_scraping_hours()
+        self.is_scrapping = False
+
         self.main_frame.after(1000, self._loop)
+    
+    def load_trending_keywords(self):
+        with open(self.TRENDING_KEYWORDS_FILE, 'r') as file:
+            for line in file.readlines():
+                line = line.strip()
+                if line == '':
+                    continue
+                else:
+                    now = datetime.now()
+                    self.trending_keywords.append({'keyword': line, 'count': 0, 'date': now})
+        
+        self.control_panel.update_trending_keywords(self.trending_keywords)
 
     def show_controll_panel(self):
         print('shoing control panel')
@@ -76,41 +101,43 @@ class MyApp(tk.Tk):
     def _show_widget(self, widget):
         widget.grid(row = 0, column = 0, sticky = 'nsew')
         widget.tkraise()
-
-    # def _start_scraper(self):
-    #     pool_data = [ 
-    #         self.news_collector.get_cnn_spider_data('apple', 'business', start_date = 'today', days_from_start_date=5), 
-    #         self.news_collector.get_cnn_spider_data('tesla', 'business', start_date = 'today', days_from_start_date=5), 
-    #     ]
-
-    #     with Pool() as pool:
-    #         res = pool.map(self.news_collector.start_cnn_search, pool_data)
-        
-    #     print(f"Completed processes with code {res}")
     
     def _add_log_to_controll_panel(self, text):
         self.control_panel.add_log(text)
     
     def task_done(self, result):
+        self.tasks_done.append(result)
         self._add_log_to_controll_panel(f'[ DONE ] {str(result)}')
 
-    def _start_scraper_async(self):
-        print("starting scrapers")
-        pool_data = [
-            # self.news_collector.get_cnn_spider_data('apple', 'business', start_date = 'today', days_from_start_date=5), 
-            # self.news_collector.get_cnn_spider_data('tesla', 'business', start_date = 'today', days_from_start_date=5), 
-            self.news_collector.get_spider_data('apple', 'business', False, 'today', 1)
-        ]
+        if self.check_all_tasks_done():
+            self._add_log_to_controll_panel('All tasks done')
+    
+    def check_all_tasks_done(self):
+        # Simple logic, if tasks done list has equal number of elements with spider_names then it's true
+        if len(self.tasks_done) == len(self.spider_names):
+            return True
+        else:
+            return False
 
+    def _start_scraper_async(self, keyword):
+
+        #CAUTION: self.tasks_done must be init to be a list(), not gonna handle error here
+
+        #Clear tasks done
+
+        self.tasks_done.clear()
+
+        data = self.news_collector.get_spider_data(keyword, 'business', False, 'today', 1)
         pool = Pool()
     
-        for data in pool_data:
+        # init pool
+        for spider_name in self.spider_names:
             self._add_log_to_controll_panel(f'[ CNN Spider ],args: {str(data)}')
-            pool.apply_async(self.news_collector.start_search_process, (data, 'cnn_search_spider'), callback=self.task_done)
-            self._add_log_to_controll_panel(f'[ MarketWatcher spider ],args: {str(data)}')
-            pool.apply_async(self.news_collector.start_search_process, (data, 'market_watch_spider'), callback=self.task_done)
-            self._add_log_to_controll_panel(f'[ Reuters Spider ],args: {str(data)}')
-            pool.apply_async(self.news_collector.start_search_process, (data, 'reuters_spider'), callback=self.task_done)
+            pool.apply_async(self.news_collector.start_search_process, (data, spider_name), callback=self.task_done)
+        # self._add_log_to_controll_panel(f'[ MarketWatcher spider ],args: {str(data)}')
+        # pool.apply_async(self.news_collector.start_search_process, (data, 'market_watch_spider'), callback=self.task_done)
+        # self._add_log_to_controll_panel(f'[ Reuters Spider ],args: {str(data)}')
+        # pool.apply_async(self.news_collector.start_search_process, (data, 'reuters_spider'), callback=self.task_done)
         
         pool.close()
         print("end scraper")
@@ -147,7 +174,60 @@ class MyApp(tk.Tk):
             self.is_splash_running = is_running
             self.control_panel.toggle_docker_status(self.is_splash_running)
         
+        #Prevent errors by skipping loop if docker splash container is not running
+        if self.is_splash_running == False:
+            self._add_log_to_controll_panel("Docker is not running, all scraping process will be hold")
+            self.main_frame.after(1000, self._loop)
+            return
+
+        
+        # scraping hours:
+        # 6 A.M
+        # 8 A.M
+        # 10 A.M
+        # 12 A.M
+        # 2 P.M
+        # 4 P.M
+        # 6 P.M
+        # 8 P.M
+        # 10 P.M
+        now = datetime.now()
+
+        current_hour = now.hour
+
+        if current_hour in self.scraping_hours:
+            self.is_scrapping = True
+        
+        if self.is_scrapping == True:
+            #Initiate scraping process if is_scraping = True
+            if self.tasks_done == None:
+                print("Starting from index 0")
+                self.current_keyword_index = 0
+                keyword = self.trending_keywords[self.current_keyword_index]['keyword']
+                self.tasks_done = list()
+                self._start_scraper_async(keyword)
+                self.control_panel.update_scraping_keywords_index(self.current_keyword_index)
+                self._add_log_to_controll_panel(f"Scraping with keyword: {keyword}")
+            else:
+                if self.check_all_tasks_done() == True:
+                    if self.current_keyword_index < len(self.trending_keywords) - 1:
+                        self.current_keyword_index += 1
+                        keyword = self.trending_keywords[self.current_keyword_index]['keyword']
+                        self._start_scraper_async(keyword)
+                        self.control_panel.update_scraping_keywords_index(self.current_keyword_index)
+                        self._add_log_to_controll_panel(f"Scraping with keyword: {keyword}")
+                    else:
+                        self.tasks_done = None 
+                        self._add_log_to_controll_panel("Completely scraped all trending keywords")
+                        self.is_scrapping = False
+
         self.main_frame.after(1000, self._loop)
+    
+    def start_scraping_trending_keywords(self):
+        self.is_scrapping = True
+    
+    def _get_scraping_hours(self):
+        return [7,10,13,16,18,21]
 
 if __name__ == '__main__':
     root = MyApp()
