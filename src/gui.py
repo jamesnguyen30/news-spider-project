@@ -8,6 +8,7 @@ import subprocess
 import pathlib
 import os
 from datetime import datetime
+import time
 
 class MenuBar(tk.Menu):
 
@@ -77,13 +78,13 @@ class MyApp(tk.Tk):
     
     def load_trending_keywords(self):
         with open(self.TRENDING_KEYWORDS_FILE, 'r') as file:
-            for line in file.readlines():
+            for index, line in enumerate(file.readlines()):
                 line = line.strip()
                 if line == '':
                     continue
                 else:
                     now = datetime.now()
-                    self.trending_keywords.append({'keyword': line, 'count': 0, 'date': now})
+                    self.trending_keywords.append({'keyword': line, 'rank': index + 1, 'date': now})
         
         self.control_panel.update_trending_keywords(self.trending_keywords)
 
@@ -200,6 +201,7 @@ class MyApp(tk.Tk):
         
         if self.is_scrapping == True:
             #Initiate scraping process if is_scraping = True
+            tick = time.time
             if self.tasks_done == None:
                 print("Starting from index 0")
                 self.current_keyword_index = 0
@@ -219,6 +221,8 @@ class MyApp(tk.Tk):
                     else:
                         self.tasks_done = None 
                         self._add_log_to_controll_panel("Completely scraped all trending keywords")
+                        tock = time.time() - tick
+                        self._add_log_to_controll_panel(f"Elapsed time {tock} seconds")
                         self.is_scrapping = False
 
         self.main_frame.after(1000, self._loop)

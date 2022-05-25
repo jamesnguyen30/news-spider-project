@@ -8,17 +8,17 @@ youtube: https://www.youtube.com/watch?v=mTOXVRao3eA
 scraper in progress:
 
 Status: DONE
-CNN search: DONE
+CNN search
+MarketWatch 
+Reuters
 
 Status: IN PROGRESS
-MarketWatch 
 
 Status: UP COMING
 
 Bloomberg
 Yahoo search
 Barrons.com
-Reuters
 
 API to use:
 

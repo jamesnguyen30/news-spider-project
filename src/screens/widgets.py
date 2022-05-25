@@ -102,7 +102,7 @@ class ControllPanel(Widget):
         '''
         # date_string = data['date'].strftime("")
         date_string = data['date'].strftime('%m-%d-%Y %H:%M:%S')
-        self.trending_keywords_list.insert('end', f"{date_string} | count: {data['count']} | keyword: {data['keyword']}")
+        self.trending_keywords_list.insert('end', f"{date_string} | rank: {data['rank']} | keyword: {data['keyword']}")
 
     def clear_trending_keywords(self):
         self.trending_keywords_list.delete(0, 'end')

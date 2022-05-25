@@ -1,8 +1,12 @@
-from jmespath import search
-from .db.schemas import News
-from .db import config
+from db.schemas import News
+from db import config
 from mongoengine import connect, disconnect
 from datetime import datetime
+import pandas as pd
+import pathlib
+import os
+
+CWD = pathlib.Path(__file__).parent.absolute()
 
 class NewsDb():
 
@@ -42,6 +46,29 @@ class NewsDb():
 
     def delete(self, obj):
         obj.delete()
+    
+    def produce_csv(self):
+        all_news = News.objects()
+        news_list = list()
+
+        for news in all_news:
+            print(news.title)
+            news_list.append([news.title, news.date, news.text, news.authors, news.source, news.url, news.image_url])
+
+        df = pd.DataFrame(news_list, columns = ['title', 'date', 'text', 'authors', 'source', 'url', 'image_url'])
+
+        return df 
 
     def close(self):
         disconnect()
+    
+if __name__ == '__main__':
+    db = NewsDb()
+    df = db.produce_csv()
+    save_path =os.path.join(CWD, 'allnews.csv') 
+    df.to_csv(save_path)
+
+    # read_df = pd.read_csv(save_path)
+    # read_df.head()
+
+

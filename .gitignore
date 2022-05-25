@@ -1,9 +1,10 @@
 .env
 **/output/
 
-
 *.pyc
 __pycache__/
+
+**/secrets/
 
 instance/
 
