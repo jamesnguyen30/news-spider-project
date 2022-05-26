@@ -1,9 +1,7 @@
-from functools import partial
-from telnetlib import SE
 from bs4 import BeautifulSoup as bs
 from newspaper import Article
 from datetime import datetime, timedelta
-from GoogleNews import GoogleNews
+# from GoogleNews import GoogleNews
 import json 
 from newsapi import NewsApiClient
 import pathlib
