@@ -2,6 +2,8 @@ import sys
 import pathlib
 
 CWD = pathlib.Path(__file__).parent.absolute()
+sys.path.append(str(CWD))
 
-if CWD not in sys.path:
-    sys.path.append(CWD)
+print(sys.path)
+
+# if CWD not in sys.path:

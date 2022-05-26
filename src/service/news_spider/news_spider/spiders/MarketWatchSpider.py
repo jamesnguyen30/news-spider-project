@@ -15,7 +15,6 @@ import requests
 from bs4 import BeautifulSoup
 import sys
 import pathlib
-
 SERVICE_ROOT = pathlib.Path(__file__).parent.parent.parent.parent
 sys.path.append(str(SERVICE_ROOT))
 

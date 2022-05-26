@@ -19,7 +19,7 @@ import pathlib
 #append path to search for database service
 SERVICE_ROOT = pathlib.Path(__file__).parent.parent.parent.parent
 sys.path.append(str(SERVICE_ROOT))
-
+print(SERVICE_ROOT)
 print(sys.path)
 
 from database import news_db
@@ -85,7 +85,7 @@ class CnnSpider(scrapy.Spider):
         self.end_date = self.end_date.replace(hour = 0, minute = 0, second = 0)
         
         assert self.search_term != None, 'Search term is None'
-        assert self.sections != None, 'Sections is  is None'
+        assert self.sections != None, 'Sections is None'
 
         #Initiate directories
 
@@ -279,6 +279,11 @@ class CnnSpider(scrapy.Spider):
                 logging.error(e)
         else:
             logging.warning(f"Article with title: {title} exists in the database. Skip save")
+
+        
+
+
+
 
 
 
