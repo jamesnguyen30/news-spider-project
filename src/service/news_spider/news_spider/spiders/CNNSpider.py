@@ -15,14 +15,8 @@ import requests
 from bs4 import BeautifulSoup
 import sys
 import pathlib
-
-#append path to search for database service
-SERVICE_ROOT = pathlib.Path(__file__).parent.parent.parent.parent
-sys.path.append(str(SERVICE_ROOT))
-print(SERVICE_ROOT)
-print(sys.path)
-
-from database import news_db
+from collections import Counter
+from .utils import CollectedData 
 
 nltk.download('punkt')
 
@@ -65,7 +59,7 @@ class CnnSpider(scrapy.Spider):
         self.days_from_start_date = int(days_from_start_date)
 
         #Set up mongodb connection
-        self.db = news_db.NewsDb()
+        # self.db = news_db.NewsDb()
 
         # Configure default date to scrape
 
@@ -89,23 +83,26 @@ class CnnSpider(scrapy.Spider):
 
         #Initiate directories
 
-        self.OUTPUT_DIR = os.path.join(CWD, 'dataset', f'{self.search_term}_{self.sections}_{get_date_format(self.start_date)}_CNN')
+        # self.OUTPUT_DIR = os.path.join(CWD, 'dataset', f'{self.search_term}_{self.sections}_{get_date_format(self.start_date)}_CNN')
+        self.OUTPUT_DIR = os.path.join(CWD, 'dataset', 'CNN')
+        self.OUTPUT_FILE = os.path.join(self.OUTPUT_DIR, f'{self.search_term}_{self.sections}.csv')
         self.LOG_DIR = os.path.join(self.OUTPUT_DIR, 'log')
         self.LOG_FILE = os.path.join(self.LOG_DIR, f'_{self.search_term}_{self.sections}_{get_date_format(self.start_date)}_log.txt')
         self.HTML_LOG_DIR = os.path.join(self.LOG_DIR, 'html')
-        self.META_DIR = os.path.join(self.OUTPUT_DIR, 'metadata')
+        # self.META_DIR = os.path.join(self.OUTPUT_DIR, 'metadata')
         self.ERROR_LINKS_FILE = os.path.join(self.LOG_DIR, 'link_errors.log')
         
         check_and_create_dir(self.OUTPUT_DIR)
-        check_and_create_dir(self.META_DIR)
+        # check_and_create_dir(self.META_DIR)
         check_and_create_dir(self.LOG_DIR)
         check_and_create_dir(self.HTML_LOG_DIR)
+
+        self.collected_data = CollectedData(self.OUTPUT_FILE)
 
         reload(logging)
         stream_handler = logging.StreamHandler()
         stream_handler.setLevel(logging.WARNING)
         logging.basicConfig(level = logging.ERROR, handlers = [logging.FileHandler(self.LOG_FILE, mode= 'w'), stream_handler])
-
 
     def start_requests(self):
         if hasattr(self, 'retry'): 
@@ -129,6 +126,35 @@ class CnnSpider(scrapy.Spider):
             file.write(response.body)
     
         self._process_html_from_path(html_saved_path)
+
+    def _process_html_from_path(self, path):
+
+        with open(path, 'r') as file:
+            html = file.read()
+        
+        soup = bs(html)
+        result_contents = soup.find_all('div', {'class':'cnn-search__result-contents'})
+
+        links = list()
+        for div in result_contents:
+
+            href = div.find("h3", {'class': 'cnn-search__result-headline'}).find('a').attrs['href']
+            date = div.find('div', {'class': 'cnn-search__result-publish-date'}).find_all('span')[1].text
+            date_obj = datetime.strptime(date, "%b %d, %Y")
+            if date_obj < self.end_date:
+                continue
+            links.append('https:' + href)
+
+        logging.info(f'found {len(links)} links before date: {self.end_date}')
+
+        # link_errors = list()
+
+        for link in links:
+            data =  self._fetch_article(link)
+            self.collected_data.add_data(data['title'], data['text'], data['date'], 
+            data['authors'], data['source'], data['url'], data['image_url'], data['search_term'])
+        
+        self.collected_data.to_csv(self.OUTPUT_FILE)
     
     def _fetch_article(self, link):
         '''
@@ -145,8 +171,6 @@ class CnnSpider(scrapy.Spider):
             article = Article(link)
             article.download()
             article.parse()
-            id = str(uuid.uuid4())
-            extension = 'txt'
 
             # newspaper3k often parse with not all the article content. 
             # If there's a Read More text at the last line, trigger manual text parsing
@@ -160,35 +184,22 @@ class CnnSpider(scrapy.Spider):
 
             #Filter out non-alphabet and non-digits character
             article.title = re.sub(r'[^a-zA-Z\s0-9]+', '', article.title)
-            filename = f'{id}_{article.title}.{extension}'
-            with open(os.path.join(self.OUTPUT_DIR, filename), 'w') as file:
-                file.write(article.text)
 
-            #Convert article publish date
-            meta_content = list() 
-            article.nlp()
-            meta_content.append(f'url,{link}')
-            meta_content.append(f'title,{article.title}')
-            meta_content.append(f'authors,{article.authors}')
-            meta_content.append(f'date, {article.publish_date}')
-            meta_content.append(f'top_image,{article.top_image}')
+            return {
+                'title': article.title,
+                'text':  article.text,
+                'url': link,
+                'authors': article.authors,
+                'date': article.publish_date,
+                'image_url': article.top_image,
+                'search_term': self.search_term,
+                'source': "CNN"
+            }
 
-            self._save_to_db(article.title, article.text, 'CNN',link, article.top_image, article.publish_date, article.authors)
-
-            # if self.db.get_by_title(article.title) is not None:
-            #     logging.warning(f"Skipping article '{article.title}' because it's already saved in database")
-            #     return
-
-            meta_filename = f'{id}.{extension}'
-            with open(os.path.join(self.META_DIR, meta_filename), 'w') as file:
-                file.write('\n'.join(meta_content))
-            logging.info(f"Saved to {self.OUTPUT_DIR} and metadata to {self.META_DIR}")
         except Exception as e:
             logging.error(f'An error happend. check below')
             logging.error(str(e))
             link_errors.append(link)
-        finally:
-            return link_errors
         
     def _manually_get_text(self, link):
 
@@ -211,43 +222,7 @@ class CnnSpider(scrapy.Spider):
         for e in text_element:
             text.append(e.text)
 
-        print("Start from here:")
         return '\n'.join(text)
-
-    def _process_html_from_path(self, path):
-
-        with open(path, 'r') as file:
-            html = file.read()
-        
-        soup = bs(html)
-        result_contents = soup.find_all('div', {'class':'cnn-search__result-contents'})
-
-        links = list()
-        for div in result_contents:
-
-            href = div.find("h3", {'class': 'cnn-search__result-headline'}).find('a').attrs['href']
-            date = div.find('div', {'class': 'cnn-search__result-publish-date'}).find_all('span')[1].text
-            date_obj = datetime.strptime(date, "%b %d, %Y")
-            if date_obj < self.end_date:
-                continue
-            links.append('https:' + href)
-
-        logging.info(f'found {len(links)} links before date: {self.end_date}')
-
-        link_errors = list()
-        for link in links:
-            for error_link in self._fetch_article(link):
-                link_errors.append(error_link)
-
-        print(link_errors)
-        with open(self.ERROR_LINKS_FILE, 'w') as file:
-            logging.warning(f"Saving {len(link_errors)} link errors to file: {self.ERROR_LINKS_FILE}")
-            if len(link_errors) > 0:
-                for link in link_errors:
-                    file.write(link)
-            else:
-                file.write("")
-
 
     def _retry_error_links(self):
         assert os.path.exists(self.ERROR_LINKS_FILE) == True, f"Attempting to retry error links but {self.ERROR_LINKS_FILE} is not found"
@@ -263,22 +238,6 @@ class CnnSpider(scrapy.Spider):
         with open(self.ERROR_LINKS_FILE, 'w') as file:
             logging.warning(f'Found {len(error_links)}. Rewriting to {self.ERROR_LINKS_FILE}')
             file.write('\n'.join(error_links))
-        
-
-    def _save_to_db(self, title:str, text:str, source:str = 'CNN', url:str = '', top_image_url:str = '', published_date:datetime = None, authors:str = None):
-        news = self.db.get_by_title(title)
-        #If the title doens't exist in database or this is a different search term
-        print('published date ' , published_date)
-        if news == None or news.search_term != self.search_term:
-            if authors == None or len(authors) == 0:
-                authors = ['na']
-            try:
-                self.db.save(self.search_term, title, text, authors, source, url, top_image_url, published_date)
-            except Exception as e:
-                logging.error("Failed to save to database, check below error")
-                logging.error(e)
-        else:
-            logging.warning(f"Article with title: {title} exists in the database. Skip save")
 
         
 

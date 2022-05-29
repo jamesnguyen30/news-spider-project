@@ -4,21 +4,19 @@ from bs4 import BeautifulSoup as bs
 import pathlib
 import os
 import nltk
-import uuid
 import logging
 from datetime import datetime, timedelta
 from newspaper import Article
 import re
 from imp import reload
 import os
-import requests
-from bs4 import BeautifulSoup
-import sys
 import pathlib
-SERVICE_ROOT = pathlib.Path(__file__).parent.parent.parent.parent
-sys.path.append(str(SERVICE_ROOT))
+from .utils import CollectedData 
 
-from database import news_db
+# SERVICE_ROOT = pathlib.Path(__file__).parent.parent.parent.parent
+# sys.path.append(str(SERVICE_ROOT))
+
+# from database import news_db
 
 nltk.download('punkt')
 
@@ -72,15 +70,17 @@ class MarketWatchSpider(scrapy.Spider):
 
         self.retry = retry
 
-        self.OUTPUT_DIR = os.path.join(CWD, 'dataset', f'{self.search_term}_{(self.start_date.strftime("%m_%d_%Y_%H_%M_%S"))}_MARTKETWATCH')
+        # self.OUTPUT_DIR = os.path.join(CWD, 'dataset', f'{self.search_term}_{(self.start_date.strftime("%m_%d_%Y_%H_%M_%S"))}_MARTKETWATCH')
+        self.OUTPUT_DIR = os.path.join(CWD, 'dataset', 'MarketWatch')
+        self.OUTPUT_FILE = os.path.join(self.OUTPUT_DIR, f'{self.search_term}.csv')
         self.LOG_DIR = os.path.join(self.OUTPUT_DIR, 'log')
         self.LOG_FILE = os.path.join(self.LOG_DIR, f'_{self.search_term}_{self.start_date.strftime("%m_%d_%Y_%H_%M_%S")}_log.txt')
         self.HTML_LOG_DIR = os.path.join(self.LOG_DIR, 'html')
-        self.META_DIR = os.path.join(self.OUTPUT_DIR, 'metadata')
+        # self.META_DIR = os.path.join(self.OUTPUT_DIR, 'metadata')
         self.ERROR_LINKS_FILE = os.path.join(self.LOG_DIR, 'link_errors.log')
 
         check_and_create_dir(self.OUTPUT_DIR)
-        check_and_create_dir(self.META_DIR)
+        # check_and_create_dir(self.META_DIR)
         check_and_create_dir(self.LOG_DIR)
         check_and_create_dir(self.HTML_LOG_DIR)
 
@@ -89,8 +89,7 @@ class MarketWatchSpider(scrapy.Spider):
         stream_handler.setLevel(logging.WARNING)
         logging.basicConfig(level = logging.INFO, handlers = [logging.FileHandler(self.LOG_FILE, mode= 'w'), stream_handler])
 
-        # Init db
-        self.db = news_db.NewsDb()
+        self.collected_data = CollectedData(self.OUTPUT_FILE)
     
     def start_requests(self):
         url = f'https://www.marketwatch.com/search?q={self.search_term}&ts=0&tab=Articles'
@@ -112,10 +111,15 @@ class MarketWatchSpider(scrapy.Spider):
 
         for link in links:
             try:
-                parsed_data = self._fetch_article(link)
-                self._save_article(parsed_data)
+                data = self._fetch_article(link)
+                self.collected_data.add_data(data['title'], data['text'], data['date'], 
+                data['authors'], data['source'], data['url'], data['image_url'], data['search_term'])
+
+                # self._save_article(parsed_data)
             except Exception as e:
                 print(str(e))
+        
+        self.collected_data.to_csv(self.OUTPUT_FILE)
 
     def _process_html_from_path(self, html_path):
         '''
@@ -199,75 +203,12 @@ class MarketWatchSpider(scrapy.Spider):
                 'text': article.text,
                 'date': str(date),
                 'authors': authors,
-                'top_image': article.top_image
+                'image_url': article.top_image,
+                'search_term': self.search_term,
+                'source': "MarketWatch"
             }
-
         except Exception as e:
             logging.error(f"Error while fetching article from {link}, check below error")
             logging.error(str(e))
             return link
-        
-    def _save_article(self, parsed_data):
-
-        # if self.db.get_by_title(parsed_data['title']) is not None:
-        #     logging.warning(f"Skipping article '{parsed_data['title']}' because it's already saved in database")
-        #     return
-
-        id = str(uuid.uuid4())
-        extension = 'txt'
-        meta_filename = f'{id}.{extension}'
-
-        meta = list()
-        # only allow digits and alphabet characters
-        parsed_data['title'] = re.sub(r'[^a-zA-Z\s0-9]+', '', parsed_data['title'])
-
-        meta.append('url,' + parsed_data['url'])
-        meta.append('title,' + parsed_data['title'])
-        meta.append('authors,' + '.'.join(parsed_data['authors']))
-        meta.append('date,' + parsed_data['date'])
-        meta.append('top_image,' + parsed_data['top_image'])
-
-        output_file = f"{id}_{parsed_data['title']}.{extension}"
-
-        try:
-            with open(os.path.join(self.META_DIR, meta_filename), 'w') as file:
-                file.write('\n'.join(meta))
-            logging.info(f"Saved meta file {meta_filename}")
-        except Exception as e:
-            logging.error(f"Error while saving {meta_filename}")
-
-        try: 
-            with open(os.path.join(self.OUTPUT_DIR, output_file), 'w') as file:
-                file.write(parsed_data['text'])
-            logging.info(f"Saved to output file {output_file}")
-        except Exception as e:
-            logging.error(f"Error while saving {output_file}")
-            logging.error(str(e))
-
-        try:
-            self._save_to_db(parsed_data['title'], parsed_data['text'], 'MartketWatch',\
-                 parsed_data['url'], parsed_data['top_image'], parsed_data['date'], parsed_data['authors'])
-        except Exception as e:
-            logging.error("Error while saving to db")
-            logging.error(str(e))
-
-    def _save_to_db(self, title, text, source = 'MarketWatch', url = '', top_image_url = '', published_date = None, authors = None):
-        try:
-            news = self.db.get_by_title(title)
-
-            #If the title doens't exist in database or this is a different search term
-            if news == None or news.search_term != self.search_term:
-                if authors == None or len(authors) == 0:
-                    authors = ['na']
-                self.db.save(self.search_term, title, text, authors, source, url, top_image_url, published_date)
-            else:
-                logging.warning(f"Article with title: {title} exists in the database. Skip save")
-        except Exception as e:
-            logging.error("Failed to save to database, check below error")
-            logging.error(e)
-
-
-
-            
-
 

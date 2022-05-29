@@ -138,10 +138,9 @@ class NewsCollector():
 
         return '\n'.join(text)
 
-
     def start_cnn_search(self, data):
         print('CNN Spider process PID=', os.getpid())
-        proc = subprocess.Popen(f"scrapy crawl cnn_search_spider -a search_term={data['search_term']} -a sections={data['sections']} -a retry={data['retry']} -a start_date={data['start_date']} -a days_from_start_date={data['days_from_start_date']} -s LOG_ENABLED=False".split(" "),\
+        proc = subprocess.Popen(f'''scrapy crawl cnn_search_spider -a search_term="{data['search_term']}" -a sections={data['sections']} -a retry={data['retry']} -a start_date={data['start_date']} -a days_from_start_date={data['days_from_start_date']} -s LOG_ENABLED=False'''.split(" "),\
                 cwd=NEWS_SPIDER_PATH, stdout=subprocess.PIPE, encoding='utf-8')
         proc.wait()
         proc.poll()
