@@ -11,6 +11,7 @@ import requests
 from newspaper import Article
 import pandas as pd
 from datetime import datetime
+from collections import Counter
 
 ROOT = pathlib.Path(__file__).parent.parent.absolute()
 CWD = pathlib.Path(__file__).parent.absolute()
@@ -18,6 +19,8 @@ CWD = pathlib.Path(__file__).parent.absolute()
 NEWS_SPIDER_PATH = os.path.join(ROOT, 'service', 'news_spider', 'news_spider')
 SECRET_DIR = os.path.join(ROOT, 'secrets', 'newsapi_key.txt')
 OUTPUT_DIR = os.path.join(CWD, 'output') 
+now = datetime.now()
+CSV_PATH = os.path.join(OUTPUT_DIR, f'headlines_{now.month}_{now.day}_{now.year}.csv')
 
 if os.path.exists(OUTPUT_DIR) == False:
     os.mkdir(OUTPUT_DIR)
@@ -28,11 +31,11 @@ class NewsCollector():
     def __init__(self):
         pass
 
-    def _get_current_headlines(self, save_csv = True):
+    def _get_newsapi_headlines(self, save_csv):
         '''
             get the current business headlines with news api
             @params:
-                string output: path to output file. 
+                string output: path to output file. Default to None
         '''
         try:
             with open(SECRET_DIR, 'r') as file:
@@ -58,15 +61,17 @@ class NewsCollector():
 
         if headlines['status'] != 'ok':
             print("Error while calling NewsApi")
-            print(print(headlines))
             return
-
+        
         print(f"NEWS API STATUS: {headlines['status']}")
         error_links = list()
         data = list()
 
+        df = pd.read_csv(CSV_PATH)
+
         for headline in headlines['articles']:
             try:
+
                 article = Article(headline['url'])
 
                 if headline['source']['name'] == 'CNBC':
@@ -87,6 +92,7 @@ class NewsCollector():
                     headline['url'], 
                     headline['urlToImage']
                 ])
+
             except Exception as e:
                 print(f" error link: {headline['url']}\n{str(e)}")
                 error_links.append(headline['url'])
@@ -94,11 +100,43 @@ class NewsCollector():
         print('Error links : ' + str(error_links))
 
         if save_csv:
-            now = datetime.now()
             df = pd.DataFrame(data, columns = ['title', 'date', 'text', 'authors', 'source', 'url', 'image_url'])
-            df.to_csv(os.path.join(OUTPUT_DIR, f'headlines_{now.month}_{now.day}_{now.year}_{now.hour}_{now.minute}.csv'))
+            df.to_csv(CSV_PATH)
         
         return data
+    
+    def get_trending_stock(self):
+        '''
+        used stockanalysis.com API : https://stockanalysis.com/trending/
+        @return
+            dict json_response: response has the following format:
+            {
+                'status': number,
+                'data': [
+                    {
+                        's': symbol
+                        'n': company name,
+                        'views': number
+                        'rank': null,
+                        'marketCap': number,
+                        'change': float,
+                        'volume': number
+                        'price': float
+                    },
+                    ....
+                ]
+            }
+        '''
+
+        url = 'https://api.stockanalysis.com/wp-json/sa/select?index=stocks&main=views&count=20&sort=desc&columns=rank,s,n,views,marketCap,change,volume,price&filters='
+        headers = {
+            'accept': '*/*',
+            'user-agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.61 Safari/537.36',
+        }
+        response = requests.get(url, headers = headers)
+        json_response = json.loads(response.content.decode('utf-8'))
+        
+        return json_response["data"]
 
     def cnbc_parser(self, link):
         '''
@@ -175,6 +213,7 @@ class NewsCollector():
 
 if __name__ == '__main__':
     collector = NewsCollector()
-    headlines = collector._get_current_headlines()
+    now = datetime.now()
+    headlines = collector._get_newsapi_headlines()
 
     print(headlines)

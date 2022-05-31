@@ -8,42 +8,78 @@ from newsapi import NewsApiClient
 import pathlib
 import os
 import requests
+import json
+import pandas as pd
 
-def extract_links(html):
+CWD = pathlib.Path(__file__).parent
+
+TMP_DIR = os.path.join(CWD, 'tmp')
+
+if os.path.exists(TMP_DIR) == False:
+    os.mkdir(TMP_DIR)
+
+if __name__ == '__main__':
+    response = requests.get('https://www.marketwatch.com/latest-news?mod=home-page')
+
+    html = str(response.content)
+
+    tmp_file = os.path.join(TMP_DIR, 'marketwatch_headlines.html')
+
+    with open(tmp_file, 'w') as file:
+        file.write(html)
+    
     soup = bs(html)
 
-    all_a_tags = soup.find_all('a')
-    hrefs = list()
-    for a in all_a_tags:
+    article_contents = soup.find_all('div', {'class': 'article__content'})
+
+    marketwatch_headlines = list()
+
+    data = list()
+
+    now = datetime.now()
+
+    for div in article_contents:
         try:
-            href = a.attrs['href']
-            if href.endswith(f'index.html'):
-                hrefs.append(href)
+            h3 = div.find("h3", {'class': 'article__headline'})
+            href = h3.find("a", {'class': 'link'}).attrs['href']
+
+            if href.startswith("https://www.marketwatch.com/"):
+                # marketwatch_headlines.append(href)
+                print(f"Extracting url: {href}")
+                article = Article(href)
+                article.download()
+                article.parse()
+
+                data.append(
+                    {
+                        'title': article.title,
+                        'date': now,
+                        'text': article.text,
+                        'authors': article.authors,
+                        'source': 'MarketWatch',
+                        'url': href,
+                        'image_url': article.top_image
+                    }
+                )
+
+            else:
+                continue
 
         except Exception as e:
             print(str(e))
-            continue
-    
-    return hrefs
+        
+    df = pd.DataFrame(data, columns = ['title', 'date', 'text', 'authors', 'source', 'url', 'image_url'])
+    csv_output = os.path.join(TMP_DIR, 'marketwatch', )
+    csv_path = os.path.join(csv_output, f'headlines_{now.month}_{now.day}_{now.year}.csv')
+    if os.path.exists(csv_output) == False:
+        os.mkdir(csv_output)
 
+    df.to_csv(csv_path)
 
-if __name__ == '__main__':
-    with open('cnn_sample.html', 'r') as file:
-        html = file.read()
-    
-    links = extract_links(html)
-    for link in links:
-        link = 'https://www.cnn.com'+link
-        print(link)
-        article = Article(link)
-        article.download()
-        article.parse()
-        print(article.text)
-        break
-
-
-
-
+    print("Saved to df")
 
     
+
+    
+
 
