@@ -18,7 +18,7 @@ TMP_DIR = os.path.join(CWD, 'tmp')
 if os.path.exists(TMP_DIR) == False:
     os.mkdir(TMP_DIR)
 
-if __name__ == '__main__':
+def get_marketwatch_latest_news():
     response = requests.get('https://www.marketwatch.com/latest-news?mod=home-page')
 
     html = str(response.content)
@@ -77,6 +77,41 @@ if __name__ == '__main__':
     df.to_csv(csv_path)
 
     print("Saved to df")
+
+def parse_cnn(link):
+    html = requests.get(link)
+
+    soup = bs(html.text)
+
+    elements = soup.find_all(recursive=True, )
+
+    text_element = list()
+    for e in elements:
+        try:
+            for element_class in e.attrs['class']:
+                if element_class.startswith('zn-body__paragraph'):
+                    text_element.append(e)
+        except KeyError as error:
+            continue
+                
+    text = list()
+    for e in text_element:
+        text.append(e.text)
+
+    print("Start from here:")
+    return '\n'.join(text)
+
+
+if __name__ == '__main__':
+
+    # article = Article('https://www.cnn.com/2022/06/01/energy/gas-prices-inflation/index.html')
+
+    # article.download()
+    # article.parse()
+
+    text = parse_cnn('https://www.cnn.com/2022/06/01/energy/gas-prices-inflation/index.html')
+
+    print(text)
 
     
 

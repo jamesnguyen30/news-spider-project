@@ -39,7 +39,7 @@ class CNNBusinessHeadlines(scrapy.Spider):
 
     name = 'cnn_business_headlines_spider'
 
-    def __init__(self, sections = None, retry = False, *args, **kwargs, ):
+    def __init__(self, output_dir, sections = None, retry = False, *args, **kwargs, ):
         super(CNNBusinessHeadlines, self).__init__(*args, **kwargs)
 
         self.sections = sections
@@ -47,10 +47,14 @@ class CNNBusinessHeadlines(scrapy.Spider):
 
         now = datetime.now()
 
-        self.OUTPUT_DIR = os.path.join(CWD, 'dataset', 'headlines', f"CNN_{now.month}_{now.day}_{now.year}")
-        self.OUTPUT_FILE = os.path.join(self.OUTPUT_DIR, f'headlines.csv')
+        self.OUTPUT_DIR = output_dir
+        self.OUTPUT_FILE = os.path.join(self.OUTPUT_DIR, f'cnn_headlines_{now.month}_{now.day}_{now.year}.csv')
 
         check_and_create_dir(self.OUTPUT_DIR)
+
+        #Only take news within 7 days
+        self.start_date = now
+        self.end_date = now - timedelta(days=7)
 
         try:
             print(f"{self.OUTPUT_FILE} loaded")
@@ -99,6 +103,12 @@ class CNNBusinessHeadlines(scrapy.Spider):
                 self.counter_url[link] += 1
 
                 data = self._fetch_article(link)
+
+                # only take 7 days from today
+
+                if data['date'] < self.end_date:
+                    continue
+
                 data_list.append([
                     data['title'],
                     data['date'],
@@ -148,6 +158,14 @@ class CNNBusinessHeadlines(scrapy.Spider):
             
             if last_line == 'Read More':
                 text = self._manually_get_text(link)
+
+                # For some reasons, text sometimes empty
+                # retry 3 times if text is empty
+                count = 0
+                while text == '' and count < 3:
+                    text = self._manually_get_text(link)
+                    count+=1
+                
                 article.text = text
 
             #Filter out non-alphabet and non-digits character
@@ -163,12 +181,10 @@ class CNNBusinessHeadlines(scrapy.Spider):
                 'image_url': article.top_image
             }
 
-            # if self.db.get_by_title(article.title) is not None:
-            #     logging.warning(f"Skipping article '{article.title}' because it's already saved in database")
-            #     return
         except Exception as e:
             print(str(e))
-            return link_errors
+            return None
+
         
     def _manually_get_text(self, link):
 
@@ -191,7 +207,6 @@ class CNNBusinessHeadlines(scrapy.Spider):
         for e in text_element:
             text.append(e.text)
 
-        print("Start from here:")
         return '\n'.join(text)
 
     def _get_all_links(self, html):

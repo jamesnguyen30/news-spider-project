@@ -1,3 +1,4 @@
+from email.headerregistry import ContentDispositionHeader
 from scrapy_splash import SplashRequest
 import scrapy
 from bs4 import BeautifulSoup as bs
@@ -32,7 +33,7 @@ def get_date_format(date, date_only=False):
         return f'{date.month}_{date.day}_{date.year}'
     return f'{date.month}_{date.day}_{date.year}_{date.hour}H_{date.minute}M'
 
-class CnnSpider(scrapy.Spider):
+class CNNSpider(scrapy.Spider):
     '''
         Depth-first CNN search spider
         specifically search for keyword
@@ -48,8 +49,15 @@ class CnnSpider(scrapy.Spider):
     '''
     name = 'cnn_spider'
 
-    def __init__(self, search_term =None, sections = None, retry = False, start_date = None, days_from_start_date = None, *args, **kwargs, ):
-        super(CnnSpider, self).__init__(*args, **kwargs)
+    def __init__(self, 
+        search_term =None, 
+        sections = None, 
+        retry = False, 
+        start_date = None, 
+        days_from_start_date = None, 
+        *args, **kwargs, ):
+
+        super(CNNSpider, self).__init__(*args, **kwargs)
 
         # Configure search params
         self.search_term = search_term
