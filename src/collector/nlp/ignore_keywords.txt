@@ -1,3 +1,7 @@
 Reuters
 CNN
 MarketWatch
+CNBC
+The Wall Street Journal
+Mortgage News Daily
+CNN Business

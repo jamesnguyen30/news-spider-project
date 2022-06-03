@@ -48,7 +48,7 @@ class CNNBusinessHeadlines(scrapy.Spider):
         now = datetime.now()
 
         self.OUTPUT_DIR = output_dir
-        self.OUTPUT_FILE = os.path.join(self.OUTPUT_DIR, f'cnn_headlines_{now.month}_{now.day}_{now.year}.csv')
+        self.OUTPUT_FILE = os.path.join(self.OUTPUT_DIR, f'headlines_{now.month}_{now.day}_{now.year}.csv')
 
         check_and_create_dir(self.OUTPUT_DIR)
 
@@ -80,12 +80,12 @@ class CNNBusinessHeadlines(scrapy.Spider):
     
     def parse(self, response):
         logging.info(f"{datetime.now()} Fetched {response.url}")
-        html_path = os.path.join(self.OUTPUT_DIR, 'cnn_headlines.html')
+        # html_path = os.path.join(self.OUTPUT_DIR, 'cnn_headlines.html')
         html = response.body
 
-        with open(html_path, 'wb') as file:
-            logging.info(f"Saved html to {html_path}")
-            file.write(response.body)
+        # with open(html_path, 'wb') as file:
+        #     logging.info(f"Saved html to {html_path}")
+        #     file.write(response.body)
         
         self._process_html(html)
     

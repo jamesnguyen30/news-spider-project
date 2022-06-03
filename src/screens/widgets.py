@@ -18,14 +18,17 @@ class ControllPanel(Widget):
 
         self.splash_container = controller._get_splash_container()
 
-        frame1 = tk.LabelFrame(self.main_frame, text = 'Running processes', width = 1000, height = 400)
+        frame1 = tk.LabelFrame(self.main_frame, text = 'Control panel', width = 1000, height = 400)
         frame1.grid(column = 0, row = 0, sticky='nsew')
 
-        frame2 = tk.LabelFrame(self.main_frame, text='Docker logs', width = 1000, height = 400)
+        # Control panel buttons
+        self._setup_control_panel_buttons(frame1)
+
+        frame2 = tk.LabelFrame(self.main_frame, text='Docker controls', width = 1000, height = 400)
         frame2.grid(column = 1, row = 0, sticky = 'nswe')
 
 
-        frame3 = tk.LabelFrame(self.main_frame, bg = 'green', text = 'Control panel', width = 1000, height = 400)
+        frame3 = tk.LabelFrame(self.main_frame, bg = 'green', text = 'Logs', width = 1000, height = 800)
         frame3.grid(column = 0, row = 1, sticky='nswe')
 
         frame4 = tk.LabelFrame(self.main_frame, text = 'trending keywords', width = 1000, height = 400)
@@ -43,7 +46,7 @@ class ControllPanel(Widget):
         for _ in range(100):
             self.trending_keywords_list.insert('end', 'test')
 
-        self.listbox = tk.Listbox(frame1, width=100)
+        self.listbox = tk.Listbox(frame3, width=100)
 
         self.listbox.pack(side = 'left', fill='both', expand = True)
 
@@ -56,18 +59,25 @@ class ControllPanel(Widget):
         log_splash_button = tk.Button(frame2, text = 'clear logs', command= self.clear_log)
         log_splash_button.pack()
 
-        start_scraper = tk.Button(frame2, text = 'start scraper', command = self.start_scraper) 
-        start_scraper.pack()
-
         self.docker_running_status_label = tk.Label(frame2, text='Getting ready ... ')
         self.docker_running_status_label.pack(side = 'top')
 
         self.docker_status = None
         self.add_log('Checking splash container ...')
-        
-    def test_callback(self):
-        print("test callback called")
-    
+
+    def _setup_control_panel_buttons(self, frame):
+        fetch_headlines_button = tk.Button(frame, text = 'fetch headlines', command = self.controller.fetch_headlines)
+        fetch_headlines_button.pack()
+
+        process_data_button = tk.Button(frame, text = 'process data')
+        process_data_button.pack()
+
+        start_scraper = tk.Button(frame, text = 'start scraper', command = self.start_scraper) 
+        start_scraper.pack()
+
+        get_trending_button = tk.Button(frame, text = 'get trending' )
+        get_trending_button.pack()
+
     def start_scraper(self):
         self.controller.start_scraping_trending_keywords()
     

@@ -104,14 +104,16 @@ def parse_cnn(link):
 
 if __name__ == '__main__':
 
-    # article = Article('https://www.cnn.com/2022/06/01/energy/gas-prices-inflation/index.html')
+    response = requests.get('https://www.reuters.com/business/')
 
-    # article.download()
-    # article.parse()
+    html = response.content
 
-    text = parse_cnn('https://www.cnn.com/2022/06/01/energy/gas-prices-inflation/index.html')
+    soup = bs(html)
 
-    print(text)
+    print()
+
+
+
 
     
 

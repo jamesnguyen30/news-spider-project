@@ -18,34 +18,29 @@ nlp = spacy.load('en_core_web_lg')
 CWD = pathlib.Path(__file__).parent
 
 class EntityExtractor():
-    def __init__(self, output_dir):
+
+    def __init__(self, output_dir, trending_keyword_filename = None):
+        print("Created EntityExtractor")
 
         now = datetime.now()
+        self.DEFAULT_TRENDING_FILENAME = f'trending_{now.month}_{now.day}_{now.year}.txt'
+
+        if trending_keyword_filename == None:
+            trending_keyword_filename = self.DEFAULT_TRENDING_FILENAME
+
 
         self.OUTPUT_DIR = output_dir
-        self.TRENDING_KEYWORDS_FILE = os.path.join(self.OUTPUT_DIR, 'trending.txt')
+        self.TRENDING_KEYWORDS_FILE = os.path.join(self.OUTPUT_DIR, trending_keyword_filename)
         self.IGNORE_ENTITIES_FILE = os.path.join(CWD, 'ignore_keywords.txt')
         self.INTERESTED_ENTITY_FILE = os.path.join(CWD, 'interested_entity.txt')
         self.HEADLINE_FILE = os.path.join(self.OUTPUT_DIR, f'headlines_{now.month}_{now.day}_{now.year}.csv')
-
-        self.counter = Counter()
-        try:
-            with open(self.TRENDING_KEYWORDS_FILE, 'r') as file:
-                for line in file.readlines():
-                    key, value = line.split(":")
-                    value = int(value)
-                    self.counter[key] = value
-        
-        except Exception as e:
-            print("Reading file error, set counter to default counter with no keys")
-            print(str(e))
 
         try:
             self.INTERESTED_ENTITY = list()
             with open(self.INTERESTED_ENTITY_FILE, 'r') as file:
                 for line in file.readlines():
                     if(line.startswith("#") == False):
-                        self.INTERESTED_ENTITY.append(line.strip())
+                        self.INTERESTED_ENTITY.append(line.lower().strip())
         except Exception as e:
             print("Can't load interested entity file, setting ignore entity to default")
             print(str(e))
@@ -55,7 +50,7 @@ class EntityExtractor():
             with open(self.IGNORE_ENTITIES_FILE, 'r') as file:
                 for line in file.readlines():
                     if(line.startswith("#") == False):
-                        self.IGNORE_ENTITY.append(line.strip())
+                        self.IGNORE_ENTITY.append(line.lower().strip())
 
         except Exception as e:
             print("Can't load ignore entity file, setHEADting ignore entity to default")
@@ -64,7 +59,7 @@ class EntityExtractor():
         print('ignore keywords ', self.IGNORE_ENTITY)
         print('interested entity' , self.INTERESTED_ENTITY)
 
-    def count_entities(self, text, counter: Counter, debug = False):
+    def count_entities(self, text, counter: Counter = None, debug = False) -> Counter:
         '''
         given a text of an article, extract entities
         @params:
@@ -79,19 +74,21 @@ class EntityExtractor():
         if debug:
             displacy.render(doc, style = 'ent')
 
-        # if counter == None:
-        #     counter = Counter()
+        if counter == None:
+            counter = Counter()
 
         # Only count the entity once for every article
         seen_entity = Counter()
 
         for entity in doc.ents:
-            if entity.label_ in self.INTERESTED_ENTITY and entity.text not in self.IGNORE_ENTITY and entity.text not in seen_entity:
-                counter[entity.text] +=1
-                seen_entity[entity.text] +=1
+            label = entity.label_.lower()
+            text = entity.text.lower().strip()
+            if label in self.INTERESTED_ENTITY and text not in self.IGNORE_ENTITY and text not in seen_entity:
+                counter[text] +=1
+                seen_entity[text] +=1
         return counter        
     
-    def process_data(self, csv_path, debug = False):
+    def get_trending_keywords(self, csv_path, debug = False):
         '''
         Traverse through a dataframe and produce counter object
         @params:
@@ -102,7 +99,8 @@ class EntityExtractor():
         '''
         try:
             df = pd.read_csv(csv_path)
-            df = df.dropna()
+            # df = df.dropna()
+            df = df[df['text'].notna()]
 
             if debug:
                 print("Dataframe heads")
@@ -130,7 +128,7 @@ class EntityExtractor():
         finally:
             return self.counter
     
-    def save_counter(self, min_count = 2):
+    def save_trending_keywords(self, min_count = 2):
         '''
         @params:
             int min_count: minimum count of a keyword to be saved

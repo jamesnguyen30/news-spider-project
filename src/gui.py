@@ -3,12 +3,14 @@ from screens.widgets import ControllPanel, AnotherPanel
 from screens.windows import NewWindow
 from multiprocessing import Pool 
 from collector.collector import NewsCollector
+from collector.processing import DataProcessor
 from utils.docker_utils import SplashContainer
 import subprocess
 import pathlib
 import os
 from datetime import datetime
 import time
+import traceback 
 
 class MenuBar(tk.Menu):
 
@@ -37,7 +39,7 @@ class MenuBar(tk.Menu):
 
 class MyApp(tk.Tk):
     CWD = pathlib.Path(__file__).parent.absolute()
-    TRENDING_KEYWORDS_FILE = os.path.join(CWD, 'trending_keywords.txt')
+    TRENDING_KEYWORDS_FILE = os.path.join(CWD,'collector','output','trending.txt')
 
     def __init__(self, *args, **kwargs):
 
@@ -53,6 +55,7 @@ class MyApp(tk.Tk):
 
         #init news collector
         self.news_collector = NewsCollector()
+
         #init splash container 
         self.splash_container = SplashContainer()
 
@@ -77,22 +80,28 @@ class MyApp(tk.Tk):
         self.main_frame.after(1000, self._loop)
     
     def load_trending_keywords(self):
-        with open(self.TRENDING_KEYWORDS_FILE, 'r') as file:
-            for index, line in enumerate(file.readlines()):
-                line = line.strip()
-                if line == '':
-                    continue
-                else:
-                    now = datetime.now()
-                    self.trending_keywords.append({'keyword': line, 'rank': index + 1, 'date': now})
-        
-        self.control_panel.update_trending_keywords(self.trending_keywords)
+        try:
+            with open(self.TRENDING_KEYWORDS_FILE, 'r') as file:
+                for index, line in enumerate(file.readlines()):
+                    line = line.strip()
+                    key,value = line.split(":")
+                    value = int(value)
+                    if line == '':
+                        continue
+                    else:
+                        now = datetime.now()
+                        self.trending_keywords.append({'keyword': key, 'rank': value, 'date': now})
+            
+            self.control_panel.update_trending_keywords(self.trending_keywords)
+        except FileNotFoundError as e:
+            print("Trending keyword file is not found")
+            traceback.print_exc()
 
     def show_controll_panel(self):
-        print('shoing control panel')
+        print('showing control panel')
         self.control_panel = ControllPanel(self.main_frame, self)
         self._show_widget(self.control_panel)
-        self.control_panel.test_callback()
+        # self.control_panel.test_callback()
     
     def show_another_panel(self):
         print("showing another panel")
@@ -232,6 +241,17 @@ class MyApp(tk.Tk):
     
     def _get_scraping_hours(self):
         return [7,10,13,16,18,21]
+    
+    def fetch_headlines(self):
+        now = datetime.now()
+        self._add_log_to_controll_panel(f"Fetching headlines for today {now}")
+        try:
+            self.news_collector._get_newsapi_headlines(True)
+            self.news_collector.start_get_cnn_headlines(detach = False)
+        except Exception as e:
+            self._add_log_to_controll_panel(f"Oops! error occured, check below error")
+            self._add_log_to_controll_panel(str(e))
+            traceback.print_exc()
 
 if __name__ == '__main__':
     root = MyApp()
