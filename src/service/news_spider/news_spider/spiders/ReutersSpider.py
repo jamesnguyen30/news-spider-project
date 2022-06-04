@@ -48,6 +48,9 @@ class ReutersSpider(scrapy.Spider):
     def __init__(self, search_term = None, sections = None, retry = False, start_date = None, days_from_start_date = 1 ,*args, **kwargs):
         super(ReutersSpider, self).__init__(*args, **kwargs)
 
+        search_term = search_term.replace(" ", "_")
+        search_term = search_term.replace('"','')
+
         self.search_term = search_term
         self.sections = sections
         self.start_date = start_date

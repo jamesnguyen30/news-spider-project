@@ -256,8 +256,21 @@ class NewsCollector():
         return {'spider': 'CNN Headline Spider', 'return_code': proc.returncode, 'pid': os.getpid()}
 
     def start_search_process(self, data, spider_name):
+        print(data)
         print('Spider process PID=', os.getpid())
-        command = f"scrapy crawl {spider_name} -a search_term={data['search_term']} -a sections={data['sections']} -a retry={data['retry']} -a start_date={data['start_date']} -a days_from_start_date={data['days_from_start_date']} -s LOG_ENABLED=False -s ROBOTSTXT_OBEY=False".split(" ")
+        # command = f'''scrapy crawl {spider_name} -a search_term="{data['search_term']}" -a sections={data['sections']} -a retry={data['retry']} -a start_date={data['start_date']} -a days_from_start_date={data['days_from_start_date']} -s LOG_ENABLED=False -s ROBOTSTXT_OBEY=False'''.split(" ")
+        command = [
+            'scrapy', 
+            'crawl', 
+            spider_name, 
+            '-a', f'''search_term="{data['search_term']}"''',
+            '-a', f'''sections={data['sections']}''',
+            '-a', f'''retry={data['retry']}''',
+            '-a', f'''start_date={data['start_date']}''',
+            '-a', f'''days_from_start_date={data['days_from_start_date']}''',
+            '-s', 'LOG_ENABLED=False',
+            '-s', 'ROBOTSTXT_OBEY=False',
+            ]
         print('command ' + str(command))
         proc = subprocess.Popen(
             command, cwd=self.NEWS_SPIDER_PATH, stdout=subprocess.PIPE, encoding='utf-8')
@@ -273,22 +286,10 @@ class NewsCollector():
             'start_date': start_date,
             'days_from_start_date': days_from_start_date
         }
-
-# if __name__ == '__main__':
-
-#     collector = NewsCollector()
-
-#     #Get headlines
-#     headlines = collector._get_newsapi_headlines(True)
-#     collector.start_get_cnn_headlines()
-
-#     # Process fetched data
-
-#     # collector.add_summary_and_keywords(HEADLINE_CSV_PATH, True)
-
-#     # counter = collector.entity_extractor.process_data(HEADLINE_CSV_PATH, True)
-#     # collector.entity_extractor.save_counter()
-#     # print(counter)
-
-#     print('ok')
-
+    
+    def generate_trending_keywords_from_today_headlines(self):
+        self.entity_extractor.generate_trending_keywords(self.HEADLINE_CSV_PATH, True)
+        self.entity_extractor.save_trending_keywords()
+    
+    def get_trending_keywords(self):
+        return self.entity_extractor.trending_keywords

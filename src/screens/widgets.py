@@ -1,6 +1,7 @@
 import tkinter as tk
 # from tkinter import ttk
 from datetime import datetime
+from collections import Counter
 
 class Widget(tk.Frame):
     def __init__(self, parent):
@@ -27,6 +28,7 @@ class ControllPanel(Widget):
         frame2 = tk.LabelFrame(self.main_frame, text='Docker controls', width = 1000, height = 400)
         frame2.grid(column = 1, row = 0, sticky = 'nswe')
 
+        self._setup_docker_controler_buttons(frame2)
 
         frame3 = tk.LabelFrame(self.main_frame, bg = 'green', text = 'Logs', width = 1000, height = 800)
         frame3.grid(column = 0, row = 1, sticky='nswe')
@@ -50,12 +52,6 @@ class ControllPanel(Widget):
 
         self.listbox.pack(side = 'left', fill='both', expand = True)
 
-        start_splash_button = tk.Button(frame2, text = 'start splash', command = self.start_splash)
-        start_splash_button.pack()
-
-        stop_splash_button = tk.Button(frame2, text = 'stop splash', command= self.stop_splash)
-        stop_splash_button.pack()
-
         log_splash_button = tk.Button(frame2, text = 'clear logs', command= self.clear_log)
         log_splash_button.pack()
 
@@ -69,18 +65,35 @@ class ControllPanel(Widget):
         fetch_headlines_button = tk.Button(frame, text = 'fetch headlines', command = self.controller.fetch_headlines)
         fetch_headlines_button.pack()
 
-        process_data_button = tk.Button(frame, text = 'process data')
-        process_data_button.pack()
+        # process_data_button = tk.Button(frame, text = 'process data')
+        # process_data_button.pack()
 
         start_scraper = tk.Button(frame, text = 'start scraper', command = self.start_scraper) 
         start_scraper.pack()
 
-        get_trending_button = tk.Button(frame, text = 'get trending' )
+        stop_scraping = tk.Button(frame, text = 'stop scraping', command = self.stop_scraping) 
+        stop_scraping.pack()
+
+        get_trending_button = tk.Button(frame, text = 'generate trending keywords', command = self.controller.generate_trending_keywords)
         get_trending_button.pack()
+
+        reload_keywords = tk.Button(frame, text = 'reload keywords', command = self.controller.load_trending_keywords)
+        reload_keywords.pack()
+    
+    def _setup_docker_controler_buttons(self, frame):
+
+        start_splash_button = tk.Button(frame, text = 'start splash', command = self.start_splash)
+        start_splash_button.pack()
+
+        stop_splash_button = tk.Button(frame, text = 'stop splash', command= self.stop_splash)
+        stop_splash_button.pack()
 
     def start_scraper(self):
         self.controller.start_scraping_trending_keywords()
-    
+
+    def stop_scraping(self):
+        self.controller.stop_scraping()
+
     def toggle_docker_status(self, is_running):
         if is_running:
             self.docker_running_status_label.config(text = "Splash status: RUNNING")
@@ -103,24 +116,27 @@ class ControllPanel(Widget):
         self.listbox.insert('end', f'{now.strftime("%m-%d-%Y : %H:%M:%S")} : {text}')
         self.listbox.see('end')
     
-    def add_trending_keywords(self, data):
+    def add_trending_keywords(self, keyword, rank):
         '''
-        data format:
-        keyword
-        count
-        date
+        @params:
+        data (key:value)
         '''
         # date_string = data['date'].strftime("")
-        date_string = data['date'].strftime('%m-%d-%Y %H:%M:%S')
-        self.trending_keywords_list.insert('end', f"{date_string} | rank: {data['rank']} | keyword: {data['keyword']}")
+        self.trending_keywords_list.insert('end',  f"keyword: {keyword}, rank: {rank}")
 
     def clear_trending_keywords(self):
         self.trending_keywords_list.delete(0, 'end')
 
-    def update_trending_keywords(self, keyword_list: list()):
+    def update_trending_keywords(self, trending_keywords: Counter):
+        '''
+        @params:
+            Counter trending_keywords: 
+        '''
+        if trending_keywords == None:
+            return
         self.clear_trending_keywords()
-        for item in keyword_list:
-            self.add_trending_keywords(item)
+        for key, value in trending_keywords.most_common():
+            self.add_trending_keywords(key, value)
 
     def update_scraping_keywords_index(self, index):
         # Highlight the scraping keyword

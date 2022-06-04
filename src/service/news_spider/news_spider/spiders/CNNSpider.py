@@ -1,4 +1,3 @@
-from email.headerregistry import ContentDispositionHeader
 from scrapy_splash import SplashRequest
 import scrapy
 from bs4 import BeautifulSoup as bs
@@ -60,6 +59,9 @@ class CNNSpider(scrapy.Spider):
         super(CNNSpider, self).__init__(*args, **kwargs)
 
         # Configure search params
+        search_term = search_term.replace(' ', '_')
+        search_term = search_term.replace('"','')
+        
         self.search_term = search_term
         self.sections = sections
         self.retry = retry
