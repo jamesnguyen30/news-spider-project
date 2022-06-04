@@ -49,6 +49,7 @@ class MyApp(tk.Tk):
         self.main_frame.pack(fill='both', expand = 'true')
         self.main_frame.grid_columnconfigure(0, weight = 1)
         self.main_frame.grid_rowconfigure(0, weight = 1)
+        self.now = datetime.now()
 
         menubar = MenuBar(self)
         tk.Tk.config(self, menu = menubar)
@@ -64,14 +65,12 @@ class MyApp(tk.Tk):
         self.show_controll_panel()
 
         self.scraper_running = None 
-        self.trending_keywords = list()
         self.current_keyword_index = None
         self.is_splash_running = None 
 
         self.load_trending_keywords()
 
         self.spider_names = ['cnn_spider', 'market_watch_spider', 'reuters_spider']
-        # self.spider_names = ['cnn_spider']
         self.tasks_done = None
 
         self.scraping_hours = self._get_scraping_hours()
@@ -81,17 +80,8 @@ class MyApp(tk.Tk):
     
     def load_trending_keywords(self):
         try:
-            with open(self.TRENDING_KEYWORDS_FILE, 'r') as file:
-                for index, line in enumerate(file.readlines()):
-                    line = line.strip()
-                    key,value = line.split(":")
-                    value = int(value)
-                    if line == '':
-                        continue
-                    else:
-                        now = datetime.now()
-                        self.trending_keywords.append({'keyword': key, 'rank': value, 'date': now})
-            
+            self._add_log_to_controll_panel("Updating trending logs")
+            self.trending_keywords = self.news_collector.entity_extractor.load_trending_keywords()
             self.control_panel.update_trending_keywords(self.trending_keywords)
         except FileNotFoundError as e:
             print("Trending keyword file is not found")
@@ -128,6 +118,9 @@ class MyApp(tk.Tk):
             return True
         else:
             return False
+    
+    def stop_scraping(self):
+        self.is_scrapping = False
 
     def _start_scraper_async(self, keyword):
 
@@ -190,7 +183,6 @@ class MyApp(tk.Tk):
             self.main_frame.after(1000, self._loop)
             return
 
-        
         # scraping hours:
         # 6 A.M
         # 8 A.M
@@ -201,20 +193,22 @@ class MyApp(tk.Tk):
         # 6 P.M
         # 8 P.M
         # 10 P.M
+
         now = datetime.now()
 
         current_hour = now.hour
 
-        if current_hour in self.scraping_hours:
-            self.is_scrapping = True
+        # if current_hour in self.scraping_hours:
+        #     self.is_scrapping = True
         
         if self.is_scrapping == True:
             #Initiate scraping process if is_scraping = True
-            tick = time.time
+            tick = time.time()
             if self.tasks_done == None:
                 print("Starting from index 0")
                 self.current_keyword_index = 0
-                keyword = self.trending_keywords[self.current_keyword_index]['keyword']
+                keywords = self.trending_keywords.most_common()
+                keyword, rank = keywords[self.current_keyword_index]
                 self.tasks_done = list()
                 self._start_scraper_async(keyword)
                 self.control_panel.update_scraping_keywords_index(self.current_keyword_index)
@@ -223,7 +217,8 @@ class MyApp(tk.Tk):
                 if self.check_all_tasks_done() == True:
                     if self.current_keyword_index < len(self.trending_keywords) - 1:
                         self.current_keyword_index += 1
-                        keyword = self.trending_keywords[self.current_keyword_index]['keyword']
+                        keywords = self.trending_keywords.most_common()
+                        keyword, rank = keywords[self.current_keyword_index]
                         self._start_scraper_async(keyword)
                         self.control_panel.update_scraping_keywords_index(self.current_keyword_index)
                         self._add_log_to_controll_panel(f"Scraping with keyword: {keyword}")
@@ -252,6 +247,14 @@ class MyApp(tk.Tk):
             self._add_log_to_controll_panel(f"Oops! error occured, check below error")
             self._add_log_to_controll_panel(str(e))
             traceback.print_exc()
+    
+    def generate_trending_keywords(self):
+        self._add_log_to_controll_panel("Generating trending keywords")
+        self.news_collector.generate_trending_keywords_from_today_headlines()
+        self._add_log_to_controll_panel("Generated trending keywords. Updated UI")
+        self.trending_keywords = self.news_collector.get_trending_keywords()
+        self.control_panel.update_trending_keywords(self.trending_keywords)
+        print('ok')
 
 if __name__ == '__main__':
     root = MyApp()
