@@ -11,6 +11,10 @@ import os
 from datetime import datetime
 import time
 import traceback 
+import sys
+
+SRC = pathlib.Path(__file__).parent
+sys.path.append(SRC)
 
 class MenuBar(tk.Menu):
 
