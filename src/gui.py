@@ -137,10 +137,6 @@ class MyApp(tk.Tk):
         for spider_name in self.spider_names:
             self._add_log_to_controll_panel(f'[ CNN Spider ],args: {str(data)}')
             pool.apply_async(self.news_collector.start_search_process, (data, spider_name), callback=self.task_done)
-        # self._add_log_to_controll_panel(f'[ MarketWatcher spider ],args: {str(data)}')
-        # pool.apply_async(self.news_collector.start_search_process, (data, 'market_watch_spider'), callback=self.task_done)
-        # self._add_log_to_controll_panel(f'[ Reuters Spider ],args: {str(data)}')
-        # pool.apply_async(self.news_collector.start_search_process, (data, 'reuters_spider'), callback=self.task_done)
         
         pool.close()
         print("end scraper")
