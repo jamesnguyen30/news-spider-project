@@ -3,14 +3,20 @@ from screens.widgets import ControllPanel, AnotherPanel
 from multiprocessing import Pool 
 from collector.collector import NewsCollector
 from collector.processing import DataProcessor
+from api.news_service import NewsService
 from utils.docker_utils import SplashContainer
 import subprocess
 import pathlib
 import os
 from datetime import datetime
+from dateutil import parser
 import time
 import traceback 
 import sys
+import pandas as pd
+import requests
+import numpy as np
+
 
 SRC = pathlib.Path(__file__).parent
 sys.path.append(SRC)
@@ -68,6 +74,9 @@ class MyApp(tk.Tk):
         #Init data processor
         self.data_processor = DataProcessor()
 
+        #Init api
+        self.api = NewsService()
+
         self.show_controll_panel()
 
         self.scraper_running = None 
@@ -89,6 +98,7 @@ class MyApp(tk.Tk):
             self._add_log_to_controll_panel("Updating trending logs")
             self.trending_keywords = self.data_processor.get_trending_keyword()
             self.control_panel.update_trending_keywords(self.trending_keywords)
+
         except FileNotFoundError as e:
             print("Trending keyword file is not found")
             traceback.print_exc()
@@ -97,7 +107,13 @@ class MyApp(tk.Tk):
         print('showing control panel')
         self.control_panel = ControllPanel(self.main_frame, self)
         self._show_widget(self.control_panel)
-        # self.control_panel.test_callback()
+        
+        #Check health
+        try:
+            self.api.check_health()
+            self._add_log_to_controll_panel("News Service API is healhty")
+        except Exception as e:
+            self._add_log_to_controll_panel("[ERROR] News Service API is not healthy")
     
     def show_another_panel(self):
         print("showing another panel")
@@ -258,16 +274,66 @@ class MyApp(tk.Tk):
         self.control_panel.update_trending_keywords(self.trending_keywords)
     
     def process_today_data(self):
-        today_headlines_file = self.data_processor.get_today_headlines_file()
-        self._add_log_to_controll_panel('Processing today data from {today_headlines_file} ...')
-        print(today_headlines_file)
-        self.data_processor.process_data(today_headlines_file)
-        self._add_log_to_controll_panel(f"Processed data and saved to {today_headlines_file}")
+        try:
+            today_headlines_file = self.data_processor.get_today_headlines_file()
+            self._add_log_to_controll_panel(f'Processing today data from {today_headlines_file} ...')
+            self.data_processor.process_data(today_headlines_file)
+            self._add_log_to_controll_panel(f"Processed data and saved to {today_headlines_file}")
+            self.news_collector.reload_collected_data()
+            self._add_log_to_controll_panel(f"Reload collected_data object")
+        except FileNotFoundError as e:
+            print(f"{today_headlines_file} is not found. Make sure to fetch the data first")
+            self._add_log_to_controll_panel(f"Error! Couldn't find {today_headlines_file} to process")
+            print(str(e))
+    
+    def save_headlines_to_db(self):
+        df = self.news_collector.get_fetched_headlines()
+        print(f'Saving {self.news_collector.HEADLINE_CSV_PATH} to database')
 
-        # now = datetime.now()
-        # headline_files = f'{headlines}' 
-        # if os.path.join()
+        for index, row in df.iterrows():
+            print(row['title'])
 
+            row['authors'] = str(row['authors'])
+            row['keywords'] = str(row['keywords'])
+
+            if row['authors'] == 'nan':
+                row['authors'] = '' 
+
+            if row['keywords'] == 'nan':
+                row['keywords'] = '' 
+
+            authors = row['authors'].split(",")
+            for author in authors:
+                author = author.strip()
+            
+            keywords = row['keywords'].split(",")
+            for keyword in keywords:
+                keyword = keyword.strip()
+
+            try:
+                response = self.api.save_news(
+                    search_term = str(row['search_term']),
+                    title= str(row['title']),
+                    text = str(row['text']),
+                    authors = authors,
+                    source = str(row['source']),
+                    url = str(row['url']),
+                    image_url = str(row['image_url']),
+                    date = parser.isoparse(row['date']),
+                    summary = str(row['summary']),
+                    keywords = keywords,
+                    sentiment = str(row['sentiment'])
+                )
+                print(response.content)
+            except requests.exceptions.HTTPError as e:
+                print("###")
+                print("Error while saving to db")
+                print("data")
+                print(row)
+                print("###")
+                print(e)
+
+    
 if __name__ == '__main__':
     root = MyApp()
     root.title('My app')

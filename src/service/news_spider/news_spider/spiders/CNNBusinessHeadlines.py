@@ -175,7 +175,7 @@ class CNNBusinessHeadlines(scrapy.Spider):
                 'title': article.title,
                 'date': article.publish_date,
                 'text': article.text,
-                'authors': article.authors,
+                'authors': ','.join(article.authors),
                 'source': 'CNN',
                 'url': link,
                 'image_url': article.top_image

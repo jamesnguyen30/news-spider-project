@@ -48,6 +48,9 @@ class NewsCollector():
         # self.trending_keyword_filename = self.entity_extractor.TRENDING_KEYWORDS_FILE
         self.collected_data = collected_data.CollectedData(self.HEADLINE_CSV_PATH)
         self.summarizer = summarizer.SimpleSummarizer()
+    
+    def reload_collected_data(self):
+        self.collected_data = collected_data.CollectedData(self.HEADLINE_CSV_PATH)
 
     def _get_newsapi_headlines(self, save_csv):
         '''
@@ -276,3 +279,6 @@ class NewsCollector():
             'start_date': start_date,
             'days_from_start_date': days_from_start_date
         }
+
+    def get_fetched_headlines(self):
+        return self.collected_data.df

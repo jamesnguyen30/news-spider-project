@@ -20,8 +20,10 @@ class CollectedData:
             self.df = pd.DataFrame() 
             print("No CSV to load")
         else:
-            self.df = pd.read_csv(dataframe_path)
-            print("Loaded ")
+            self.df = pd.read_csv(dataframe_path, dtype={'title': str, 'date': str, 'text': str, 'authors': str, 
+            'source': str, 'url': str, 'image_url': str, 'search_term': str, 'summary': str, 'keywords': str})
+            print(f"Loaded {len(self.df['title'])} rows")
+
             for index, row in self.df.iterrows():
                 self.counter_url[row['url']]+=1
     

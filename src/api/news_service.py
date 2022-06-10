@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 
 class NewsService():
-    SRC = pathlib.Path(__file__).parent.parent.parent
+    SRC = pathlib.Path(__file__).parent.parent
     DOTENV_PATH = os.path.join(SRC, 'secrets', 'dotenv')
     DOTENV_PATH = '/home/nguyen/Desktop/news_spider_project/src/secrets/dotenv'
 
@@ -27,10 +27,14 @@ class NewsService():
     
     def check_health(self):
         response = requests.get(f'{self.URL}')
+        response.raise_for_status()
         return json.loads(response.content.decode('utf-8'))
     
-    def save_news(self, search_term: str, title: str, \
-        text: str, authors: list, source: str, url: str, image_url: str, date: datetime):
+    def save_news(self, search_term: str, title: str,
+        text: str, authors: list, source: str, url: str,
+        image_url: str, date: datetime, summary: str, keywords: list, sentiment: str  ):
+
+        timestamp = int(datetime.timestamp(date))
         news_data = {
             'search_term': search_term,
             'title': title, 
@@ -39,10 +43,14 @@ class NewsService():
             'source': source,
             'url': url,
             'image_url': image_url,
-            'date': date.isoformat() + 'Z'
+            'date': timestamp,
+            'summary': summary,
+            'keywords': keywords,
+            'sentiment': sentiment
         }
 
         response = requests.post(f'{self.URL}/news', json =  news_data)
+        response.raise_for_status()
 
         return response
 

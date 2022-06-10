@@ -194,6 +194,7 @@ class CNNSpider(scrapy.Spider):
 
             #Filter out non-alphabet and non-digits character
             article.title = re.sub(r'[^a-zA-Z\s0-9]+', '', article.title)
+            article.authors = ','.join(article.authors)
 
             return {
                 'title': article.title,
