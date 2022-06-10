@@ -65,8 +65,8 @@ class ControllPanel(Widget):
         fetch_headlines_button = tk.Button(frame, text = 'fetch headlines', command = self.controller.fetch_headlines)
         fetch_headlines_button.pack()
 
-        # process_data_button = tk.Button(frame, text = 'process data')
-        # process_data_button.pack()
+        process_data_button = tk.Button(frame, text = 'process data', command = self.controller.process_today_data)
+        process_data_button.pack()
 
         start_scraper = tk.Button(frame, text = 'start scraper', command = self.start_scraper) 
         start_scraper.pack()
@@ -79,6 +79,7 @@ class ControllPanel(Widget):
 
         reload_keywords = tk.Button(frame, text = 'reload keywords', command = self.controller.load_trending_keywords)
         reload_keywords.pack()
+
     
     def _setup_docker_controler_buttons(self, frame):
 

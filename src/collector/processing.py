@@ -3,6 +3,7 @@ import sys
 import os
 import pandas as pd
 from nlp.sentiment.models import SentimentModel
+from collections import Counter
 
 CWD = pathlib.Path(__file__).parent.absolute()
 
@@ -15,16 +16,18 @@ class DataProcessor():
     Process news data using CSV format
 
     '''
-    def __init__(self, csv_path):
+    def __init__(self):
         self.OUTPUT_DIR = os.path.join(CWD, 'output') 
-        self.CSV_PATH = csv_path
+        # self.CSV_PATH = csv_path
 
         self.entity_extractor = entity_extractor.EntityExtractor(self.OUTPUT_DIR)
-        self.trending_keyword_filename = self.entity_extractor.TRENDING_KEYWORDS_FILE
+        # self.trending_keyword_filename = self.entity_extractor.TRENDING_KEYWORDS_FILE
         self.summarizer = summarizer.SimpleSummarizer()
         self.sentiment_estimator = SentimentModel()
     
-
+    def get_today_headlines_file(self):
+        return self.entity_extractor.HEADLINE_FILE
+    
     def process_data(self, csv_path, debug = False):
         '''
         Process fetched data
@@ -62,11 +65,16 @@ class DataProcessor():
         titles = list()
         for title in titles_array:
             title = str(title)
-            title = title.split('-')[0]
-            title = title.strip()
             titles.append(title)
 
         labels = self.predict_titles_sentiment(titles)
+
+        label_counter = Counter()
+        for label in labels:
+            label_counter[label] += 1
+
+        print("Label statistics")
+        print(label_counter)
 
         df['sentiment'] = labels 
 
@@ -76,16 +84,20 @@ class DataProcessor():
         results = self.sentiment_estimator.predict(titles)
         return results
 
-    def produce_trending_keywords(self):
-        self.entity_extractor.get_trending_keywords(self.CSV_PATH, True)
+    def generate_trending_keywords(self, csv_path = None):
+        self.entity_extractor.generate_trending_keywords(csv_path, True)
+        print(f"Extracted trending keywords")
         self.entity_extractor.save_trending_keywords()
+    
+    def get_trending_keyword(self):
+        return self.entity_extractor.load_trending_keywords()
 
-if __name__ == '__main__':
-    processsor = DataProcessor('/home/nguyen/Desktop/news_spider_project/src/collector/output/headlines_6_9_2022.csv')
+# if __name__ == '__main__':
+#     processsor = DataProcessor('/home/nguyen/Desktop/news_spider_project/src/collector/output/headlines_6_9_2022.csv')
 
-    processsor.process_data('/home/nguyen/Desktop/news_spider_project/src/collector/output/headlines_6_9_2022.csv')
+#     processsor.process_data('/home/nguyen/Desktop/news_spider_project/src/collector/output/headlines_6_9_2022.csv')
 
-    print('data is processed')
+#     print('data is processed')
     # df = pd.read_csv('/home/nguyen/Desktop/news_spider_project/src/collector/output/headlines_6_9_2022.csv')
 
     # df.drop_duplicates(inplace=True)

@@ -9,12 +9,10 @@ import pathlib
 import os
 import requests
 from newspaper import Article
-import pandas as pd
 from datetime import datetime
 from multiprocessing import Process, Pool
 import sys
 import traceback
-from collections import Counter
 
 now = datetime.now()
 
@@ -46,8 +44,8 @@ class NewsCollector():
             os.mkdir(self.OUTPUT_DIR)
             print(f"created new output dir {self.OUTPUT_DIR}")
 
-        self.entity_extractor = entity_extractor.EntityExtractor(self.OUTPUT_DIR)
-        self.trending_keyword_filename = self.entity_extractor.TRENDING_KEYWORDS_FILE
+        # self.entity_extractor = entity_extractor.EntityExtractor(self.OUTPUT_DIR)
+        # self.trending_keyword_filename = self.entity_extractor.TRENDING_KEYWORDS_FILE
         self.collected_data = collected_data.CollectedData(self.HEADLINE_CSV_PATH)
         self.summarizer = summarizer.SimpleSummarizer()
 
@@ -97,19 +95,11 @@ class NewsCollector():
                     article.parse()
                     headline['content'] = article.text
 
-                print(f"Extracted content for {headline['title']}")
-
-                # counter = self.entity_extractor.count_entities(headline['content'])
-
-                # keywords = list()
-
-                # for key, value in counter.most_common():
-                #     keywords.append(key)
-
-                # summary = self.summarizer.summarize(headline['content'])
+                cleaned_title = headline['title'].split("-")[0].strip()
+                print(f"Extracted content for {cleaned_title}")
 
                 self.collected_data.add_data(
-                    title=headline['title'],
+                    title=cleaned_title,
                     date=headline['publishedAt'],
                     text=headline['content'],
                     authors=headline['author'],
@@ -286,10 +276,3 @@ class NewsCollector():
             'start_date': start_date,
             'days_from_start_date': days_from_start_date
         }
-    
-    def generate_trending_keywords_from_today_headlines(self):
-        self.entity_extractor.generate_trending_keywords(self.HEADLINE_CSV_PATH, True)
-        self.entity_extractor.save_trending_keywords()
-    
-    def get_trending_keywords(self):
-        return self.entity_extractor.trending_keywords

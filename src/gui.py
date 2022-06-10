@@ -1,6 +1,5 @@
 import tkinter as tk
 from screens.widgets import ControllPanel, AnotherPanel
-from screens.windows import NewWindow
 from multiprocessing import Pool 
 from collector.collector import NewsCollector
 from collector.processing import DataProcessor
@@ -66,6 +65,9 @@ class MyApp(tk.Tk):
 
         self.splash_logs = list()
 
+        #Init data processor
+        self.data_processor = DataProcessor()
+
         self.show_controll_panel()
 
         self.scraper_running = None 
@@ -85,7 +87,7 @@ class MyApp(tk.Tk):
     def load_trending_keywords(self):
         try:
             self._add_log_to_controll_panel("Updating trending logs")
-            self.trending_keywords = self.news_collector.entity_extractor.load_trending_keywords()
+            self.trending_keywords = self.data_processor.get_trending_keyword()
             self.control_panel.update_trending_keywords(self.trending_keywords)
         except FileNotFoundError as e:
             print("Trending keyword file is not found")
@@ -194,9 +196,9 @@ class MyApp(tk.Tk):
         # 8 P.M
         # 10 P.M
 
-        now = datetime.now()
+        # now = datetime.now()
 
-        current_hour = now.hour
+        # current_hour = now.hour
 
         # if current_hour in self.scraping_hours:
         #     self.is_scrapping = True
@@ -250,11 +252,21 @@ class MyApp(tk.Tk):
     
     def generate_trending_keywords(self):
         self._add_log_to_controll_panel("Generating trending keywords")
-        self.news_collector.generate_trending_keywords_from_today_headlines()
+        self.data_processor.generate_trending_keywords()
         self._add_log_to_controll_panel("Generated trending keywords. Updated UI")
-        self.trending_keywords = self.news_collector.get_trending_keywords()
+        self.trending_keywords = self.data_processor.get_trending_keyword()
         self.control_panel.update_trending_keywords(self.trending_keywords)
-        print('ok')
+    
+    def process_today_data(self):
+        today_headlines_file = self.data_processor.get_today_headlines_file()
+        self._add_log_to_controll_panel('Processing today data from {today_headlines_file} ...')
+        print(today_headlines_file)
+        self.data_processor.process_data(today_headlines_file)
+        self._add_log_to_controll_panel(f"Processed data and saved to {today_headlines_file}")
+
+        # now = datetime.now()
+        # headline_files = f'{headlines}' 
+        # if os.path.join()
 
 if __name__ == '__main__':
     root = MyApp()

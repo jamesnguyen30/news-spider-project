@@ -91,16 +91,19 @@ class EntityExtractor():
                 seen_entity[text] += 1
         return counter
 
-    def generate_trending_keywords(self, csv_path, debug=False):
+    def generate_trending_keywords(self, csv_path = None, debug=False):
         '''
         Traverse through a dataframe and produce counter object
         self.trending will be reset
         @params:
-            string csv_path: path to csv file 
+            string csv_path: path to csv file default will bet set to self.HEADLINE_FILE path
             boolean debug = False: print messages if set to True
         @returns
             self.trending_keywords instance
         '''
+        if csv_path == None:
+            csv_path = self.HEADLINE_FILE
+
         self.trending_keywords = Counter()
         try:
             df = pd.read_csv(csv_path)
