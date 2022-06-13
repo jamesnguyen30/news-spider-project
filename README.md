@@ -4,3 +4,5 @@
 
 Setting up with splash : https://github.com/scrapy-plugins/scrapy-splash
 youtube: https://www.youtube.com/watch?v=mTOXVRao3eA
+
+Moved this repo to https://github.com/nguyenthecoder/project-portfolio
